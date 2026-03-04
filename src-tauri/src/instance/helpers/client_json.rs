@@ -403,6 +403,11 @@ pub async fn libraries_to_info(
         loader_version = Some(v.to_string());
         break;
       }
+      ("com.cleanroommc", "cleanroom") => {
+        loader_type = ModLoaderType::Cleanroom;
+        loader_version = Some(v.to_string());
+        break;
+      }
       _ => {}
     }
   }

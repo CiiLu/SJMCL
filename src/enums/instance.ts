@@ -19,4 +19,5 @@ export enum ModLoaderType {
   NeoForge = "NeoForge",
   LiteLoader = "LiteLoader",
   Quilt = "Quilt",
+  Cleanroom = "Cleanroom",
 }

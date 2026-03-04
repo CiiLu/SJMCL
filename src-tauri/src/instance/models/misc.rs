@@ -35,6 +35,7 @@ pub enum ModLoaderType {
   NeoForge,
   LiteLoader,
   Quilt,
+  Cleanroom,
 }
 
 impl FromStr for ModLoaderType {
@@ -49,6 +50,7 @@ impl FromStr for ModLoaderType {
       "neoforge" => Ok(ModLoaderType::NeoForge),
       "liteloader" => Ok(ModLoaderType::LiteLoader),
       "quilt" => Ok(ModLoaderType::Quilt),
+      "cleanroom" => Ok(ModLoaderType::Cleanroom),
       _ => Err(format!("Unsupported ModLoaderType: {}", input)),
     }
   }
@@ -63,6 +65,7 @@ impl ModLoaderType {
       ModLoaderType::NeoForge => "/images/icons/NeoForge.png",
       ModLoaderType::LiteLoader => "/images/icons/LiteLoader.png",
       ModLoaderType::Quilt => "/images/icons/Quilt.png",
+      ModLoaderType::Cleanroom => "/images/icons/Cleanroom.png",
     }
   }
 }

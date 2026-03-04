@@ -124,6 +124,7 @@ const DEFAULT_MOD_LOADER_PRIORITY_LIST: [ModLoaderType; 6] = [
 
 impl ModLoaderType {
   fn parse_mod_info_from_jar(self, jar: &mut ZipArchive<Cursor<Vec<u8>>>) -> Option<LocalModInfo> {
+    //TODO: Cleanroom
     match self {
       Self::Fabric => fabric::FabricModMetadataParser::parse_mod_info_from_jar(jar),
       Self::Forge | Self::NeoForge => forge::ForgeModMetadataParser::parse_mod_info_from_jar(jar),
@@ -135,6 +136,7 @@ impl ModLoaderType {
   }
 
   async fn parse_mod_info_from_dir(self, dir_path: &Path) -> Option<LocalModInfo> {
+    //TODO: Cleanroom
     match self {
       Self::Fabric => fabric::FabricModMetadataParser::parse_mod_info_from_dir(dir_path).await,
       Self::Forge | Self::NeoForge => {

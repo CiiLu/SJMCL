@@ -56,6 +56,7 @@ export const loaderTypesToIcon: Record<string, string> = {
   Fabric: "/images/icons/Fabric.png",
   Forge: "/images/icons/Anvil.png", // differ from that in mod-loader-selector
   NeoForge: "/images/icons/NeoForge.png",
+  Cleanroom: "/images/icons/Cleanroom.png",
   OptiFine: "/images/icons/OptiFine.png",
 };
 
