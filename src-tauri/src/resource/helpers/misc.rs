@@ -49,8 +49,10 @@ pub fn get_download_api(source: SourceType, resource_type: ResourceType) -> SJMC
       ResourceType::NeoforgeMetaForge => Ok(Url::parse("https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/forge/")?),
       ResourceType::NeoforgeMetaNeoforge => Ok(Url::parse("https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge/")?),
       ResourceType::NeoforgeMaven | ResourceType::NeoforgeInstall => Ok(Url::parse("https://maven.neoforged.net/releases/")?),
+      ResourceType::CleanroomInstall | ResourceType::CleanroomMaven => Ok(Url::parse("https://repo.cleanroommc.com/releases/")?),
       ResourceType::QuiltMaven => Ok(Url::parse("https://maven.quiltmc.org/repository/release/")?),
       ResourceType::QuiltMeta => Ok(Url::parse("https://meta.quiltmc.org/")?),
+      ResourceType::CleanroomMeta => Ok(Url::parse("https://hmcl.glavo.site/metadata/cleanroom/index.json")?),
     },
     SourceType::BMCLAPIMirror => match resource_type {
       ResourceType::VersionManifest => Ok(Url::parse("https://bmclapi2.bangbang93.com/mc/game/version_manifest.json")?),
@@ -72,6 +74,8 @@ pub fn get_download_api(source: SourceType, resource_type: ResourceType) -> SJMC
       ResourceType::OptiFine => Ok(Url::parse("https://bmclapi2.bangbang93.com/optifine/")?),
       ResourceType::QuiltMaven => Ok(Url::parse("https://bmclapi2.bangbang93.com/maven/")?),
       ResourceType::QuiltMeta => Ok(Url::parse("https://bmclapi2.bangbang93.com/quilt-meta/")?),
+      ResourceType::CleanroomInstall | ResourceType::CleanroomMaven => Ok(Url::parse("https://bmclapi2.bangbang93.com/maven/")?),
+      ResourceType::CleanroomMeta => Ok(Url::parse("https://hmcl.glavo.site/metadata/cleanroom/index.json")?),
     },
   }
 }

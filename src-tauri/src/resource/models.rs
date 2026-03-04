@@ -28,6 +28,9 @@ pub enum ResourceType {
   NeoforgeMaven,
   QuiltMaven,
   QuiltMeta,
+  CleanroomInstall,
+  CleanroomMaven,
+  CleanroomMeta,
 }
 
 #[derive(Eq, Hash, PartialEq, Clone, Copy, Debug, EnumIter)]
