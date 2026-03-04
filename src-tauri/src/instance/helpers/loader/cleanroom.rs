@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Read;
 use std::path::PathBuf;
@@ -7,9 +6,9 @@ use url::Url;
 use zip::ZipArchive;
 
 use crate::error::SJMCLResult;
-use crate::instance::helpers::client_json::{LaunchArgumentTemplate, McClientInfo};
+use crate::instance::helpers::client_json::McClientInfo;
 use crate::instance::helpers::loader::common::add_library_entry;
-use crate::instance::helpers::loader::forge::InstallProfile;
+use crate::instance::helpers::loader::forge::LegacyInstallProfile;
 use crate::instance::helpers::misc::get_instance_subdir_paths;
 use crate::instance::models::misc::{Instance, InstanceError, InstanceSubdirType, ModLoader};
 use crate::launch::helpers::file_validator::convert_library_name_to_path;
@@ -62,40 +61,39 @@ pub async fn download_cleanroom_libraries(
     &[&InstanceSubdirType::Root, &InstanceSubdirType::Libraries],
   )
   .ok_or(InstanceError::InvalidSourcePath)?;
-  let [root_dir, lib_dir] = subdirs.as_slice() else {
+  let [_root_dir, lib_dir] = subdirs.as_slice() else {
     return Err(InstanceError::InvalidSourcePath.into());
   };
   let mut task_params = vec![];
 
-  let name = "cleanroom";
-
   let installer_coord = format!(
-    "com.cleanroommc:{name}:{}-installer",
+    "com.cleanroommc:cleanroom:{}-installer",
     instance.mod_loader.version
   );
-
   let installer_rel = convert_library_name_to_path(&installer_coord, None)?;
   let installer_path = lib_dir.join(&installer_rel);
-  let bin_patch = lib_dir.join(convert_library_name_to_path(
+
+  let bin_patch_rel = convert_library_name_to_path(
     &format!(
-      "com.cleanroommc:{name}:{}:clientdata@lzma",
+      "com.cleanroommc:cleanroom:{}:clientdata@lzma",
       instance.mod_loader.version
     ),
     None,
-  )?);
+  )?;
+  let bin_patch = lib_dir.join(bin_patch_rel);
+
   if !installer_path.exists() {
     return Err(InstanceError::LoaderInstallerNotFound.into());
   }
-  let (content, version) = {
+
+  let (profile_data, libraries_to_process) = {
     let file = File::open(&installer_path)?;
     let mut archive = ZipArchive::new(file)?;
 
-    // Extract maven folder contents to lib_dir
     for i in 0..archive.len() {
       let mut file = archive.by_index(i)?;
       let path = file.mangled_name();
       let outpath = if path.starts_with("maven/") {
-        // Remove "maven/" prefix and join with lib_dir
         let relative_path = path.strip_prefix("maven/").unwrap();
         lib_dir.join(relative_path)
       } else if path == *"data/client.lzma" {
@@ -104,208 +102,97 @@ pub async fn download_cleanroom_libraries(
         continue;
       };
 
-      if file.name().ends_with('/') {
-        // Create directory
-        fs::create_dir_all(&outpath)?;
-      } else {
-        // Create parent directories if they don't exist
+      if file.is_file() {
         if let Some(p) = outpath.parent() {
           if !p.exists() {
             fs::create_dir_all(p)?;
           }
         }
-
-        // Extract file
         let mut outfile = File::create(&outpath)?;
         std::io::copy(&mut file, &mut outfile)?;
       }
     }
 
-    let mut s = String::new();
+    let mut install_profile_str = String::new();
+    if let Ok(mut f) = archive.by_name("install_profile.json") {
+      f.read_to_string(&mut install_profile_str)?;
+    }
+
+    if install_profile_str.is_empty() {
+      return Err(InstanceError::InstallProfileParseError.into());
+    }
+
+    let profile: LegacyInstallProfile = serde_json::from_str(&install_profile_str)
+      .map_err(|_| InstanceError::InstallProfileParseError)?;
+
     {
-      let mut install_profile = archive.by_name("install_profile.json")?;
-      install_profile.read_to_string(&mut s)?;
-    }
-
-    let mut t = String::new();
-    {
-      let mut version_file = archive.by_name("version.json")?;
-      version_file.read_to_string(&mut t)?;
-    }
-
-    (s, t)
-  };
-
-  let mut profile: InstallProfile = serde_json::from_str(&content)?;
-
-  let mut args_map = HashMap::<String, String>::new();
-  args_map.insert(
-    "{MINECRAFT_JAR}".into(),
-    instance
-      .version_path
-      .join(format!("{}.jar", instance.name))
-      .to_string_lossy()
-      .to_string(),
-  );
-  args_map.insert("{BINPATCH}".into(), bin_patch.to_string_lossy().to_string());
-  args_map.insert(
-    "{INSTALLER}".into(),
-    installer_path.to_string_lossy().to_string(),
-  );
-  args_map.insert("{SIDE}".into(), "client".to_string());
-  args_map.insert("{ROOT}".into(), root_dir.to_string_lossy().to_string());
-  for (key, value) in profile.data.iter() {
-    if args_map.contains_key(&format!("{{{key}}}")) {
-      continue;
-    }
-    let mut value_client = value.client.clone();
-    if value_client.starts_with('[') && value_client.ends_with(']') {
-      value_client = value_client
-        .trim_start_matches('[')
-        .trim_end_matches(']')
-        .to_string();
-      value_client = lib_dir
-        .join(convert_library_name_to_path(&value_client, None)?)
-        .to_string_lossy()
-        .to_string();
-    }
-    args_map.insert(format!("{{{key}}}"), value_client);
-  }
-
-  for processor in profile.processors.iter_mut() {
-    if processor.args.contains(&"DOWNLOAD_MOJMAPS".to_string()) {
-      if let Some(mojmaps) = args_map.get("{MOJMAPS}") {
-        if let Some(client_mappings) = client_info.downloads.get("client_mappings") {
-          task_params.push(PTaskParam::Download(DownloadParam {
-            src: client_mappings.url.parse()?,
-            dest: lib_dir.join(mojmaps),
-            filename: None,
-            sha1: Some(client_mappings.sha1.clone()),
-          }));
+      let mut file = archive.by_name(&profile.install.file_path)?;
+      let dest_path = lib_dir.join(convert_library_name_to_path(&profile.install.path, None)?);
+      if let Some(parent) = dest_path.parent() {
+        if !parent.exists() {
+          fs::create_dir_all(parent)?;
         }
       }
-      processor.args.clear();
-      continue;
+      let mut output = File::create(&dest_path)?;
+      std::io::copy(&mut file, &mut output)?;
     }
 
-    processor.jar = lib_dir
-      .join(convert_library_name_to_path(&processor.jar, None)?)
-      .to_string_lossy()
-      .to_string();
-
-    for class in processor.classpath.iter_mut() {
-      *class = lib_dir
-        .join(convert_library_name_to_path(class, None)?)
-        .to_string_lossy()
-        .to_string();
-    }
-
-    for arg in processor.args.iter_mut() {
-      if arg.starts_with('[') && arg.ends_with(']') {
-        *arg = arg
-          .trim_start_matches('[')
-          .trim_end_matches(']')
-          .to_string();
-        *arg = lib_dir
-          .join(convert_library_name_to_path(arg, None)?)
-          .to_string_lossy()
-          .to_string();
-      }
-      for (key, value) in &args_map {
-        *arg = arg.replace(key, value);
-      }
-    }
-  }
-
-  profile.processors.retain(|processor| {
-    if let Some(sides) = &processor.sides {
-      sides.contains(&"client".to_string())
-    } else {
-      !processor.args.is_empty()
-    }
-  });
-
-  fs::write(
-    instance.version_path.join("install_profile.json"),
-    &serde_json::to_vec_pretty(&profile)?,
-  )?;
-
-  let cleanroom_info: McClientInfo = serde_json::from_str(&version)?;
-  client_info.main_class = cleanroom_info.main_class.clone();
-
-  for lib in cleanroom_info.libraries.iter() {
-    let name = &lib.name;
-    add_library_entry(&mut client_info.libraries, name, Some(lib.clone()))?;
-
-    let url = lib
-      .downloads
-      .as_ref()
-      .and_then(|d| d.artifact.as_ref())
-      .map(|a| a.url.as_str())
-      .unwrap_or_default();
-    if url.is_empty() {
-      continue;
-    }
-
-    task_params.push(PTaskParam::Download(DownloadParam {
-      src: convert_url_to_target_source(
-        &Url::parse(url)?,
-        &[ResourceType::CleanroomMaven, ResourceType::Libraries],
-        &priority[0],
-      )?,
-      dest: lib_dir.join(&convert_library_name_to_path(name, None)?),
-      filename: None,
-      sha1: None,
-    }));
-  }
-
-  let nf_args = cleanroom_info
-    .arguments
-    .ok_or(InstanceError::ModLoaderVersionParseError)?;
-  let v_args = client_info
-    .arguments
-    .clone()
-    .ok_or(InstanceError::ClientJsonParseError)?;
-  let new_args = LaunchArgumentTemplate {
-    game: [v_args.game, nf_args.game].concat(),
-    jvm: [v_args.jvm, nf_args.jvm].concat(),
+    (profile, bin_patch)
   };
-  client_info.arguments = Some(new_args.clone());
-  client_info.patches.push(McClientInfo {
+
+  let profile = profile_data;
+  let main_class = profile.version_info.main_class;
+  let libraries = profile.version_info.libraries;
+
+  client_info.main_class = Some(main_class.clone());
+
+  let mut new_patch = McClientInfo {
     id: "cleanroom".to_string(),
-    version: Some(cleanroom_info.id.clone()),
+    version: Some(instance.mod_loader.version.clone()),
     priority: Some(30000),
-    inherits_from: cleanroom_info.inherits_from.clone(),
-    main_class: cleanroom_info.main_class.clone(),
-    arguments: Some(new_args.clone()),
+    main_class: Some(main_class.to_string()),
+    inherits_from: Some(profile.version_info.inherits_from),
+    minecraft_arguments: Some(profile.version_info.minecraft_arguments.clone()),
+    release_time: profile.version_info.release_time,
+    time: profile.version_info.time,
+    type_: profile.version_info.type_,
+    assets: profile.version_info.assets,
     ..Default::default()
-  });
+  };
 
-  for lib in profile.libraries.iter() {
-    let name = &lib.name;
-    let url = lib
-      .downloads
-      .as_ref()
-      .and_then(|d| d.artifact.as_ref())
-      .map(|a| a.url.as_str())
-      .unwrap_or("");
+  client_info.minecraft_arguments = Some(profile.version_info.minecraft_arguments.clone());
 
-    if url.is_empty() {
+  for lib in libraries.iter() {
+    let name = lib.name.clone();
+    add_library_entry(&mut client_info.libraries, &name, None)?;
+    add_library_entry(&mut new_patch.libraries, &name, None)?;
+
+    if name == profile.install.path {
       continue;
     }
 
-    let rel = convert_library_name_to_path(&name.to_string(), None)?;
+    let url = if let Some(u) = &lib.url {
+      Url::parse(u)?
+    } else {
+      get_download_api(priority[0], ResourceType::Libraries)?
+    };
+
+    let rel = convert_library_name_to_path(&name, None)?;
+    let src = convert_url_to_target_source(
+      &url.join(&rel)?,
+      &[ResourceType::CleanroomMaven, ResourceType::Libraries],
+      &priority[0],
+    )?;
+
     task_params.push(PTaskParam::Download(DownloadParam {
-      src: convert_url_to_target_source(
-        &Url::parse(url)?,
-        &[ResourceType::CleanroomMaven, ResourceType::Libraries],
-        &priority[0],
-      )?,
+      src,
       dest: lib_dir.join(&rel),
       filename: None,
       sha1: None,
     }));
   }
+
+  client_info.patches.push(new_patch);
 
   let mut seen = std::collections::HashSet::new();
   task_params.retain(|param| match param {
