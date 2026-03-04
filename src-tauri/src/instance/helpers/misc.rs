@@ -1,6 +1,7 @@
 use crate::error::SJMCLResult;
 use crate::instance::helpers::client_jar::load_game_version_from_jar;
 use crate::instance::helpers::client_json::{libraries_to_info, patches_to_info, McClientInfo};
+use crate::instance::helpers::loader::cleanroom::download_cleanroom_libraries;
 use crate::instance::helpers::loader::forge::download_forge_libraries;
 use crate::instance::helpers::loader::neoforge::download_neoforge_libraries;
 use crate::instance::models::misc::{
@@ -188,6 +189,11 @@ pub async fn refresh_instances(
         match cfg_read.mod_loader.status {
           ModLoaderStatus::NotDownloaded => {
             match cfg_read.mod_loader.loader_type {
+              ModLoaderType::Cleanroom => {
+                cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+                download_cleanroom_libraries(app, &priority_list, &cfg_read, &mut client_data)
+                  .await?;
+              }
               ModLoaderType::Forge => {
                 cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
                 download_forge_libraries(app, &priority_list, &cfg_read, &mut client_data).await?;
@@ -207,6 +213,10 @@ pub async fn refresh_instances(
             Ok(())
           }
           ModLoaderStatus::DownloadFailed => match cfg_read.mod_loader.loader_type {
+            ModLoaderType::Cleanroom => {
+              cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
+              download_cleanroom_libraries(app, &priority_list, &cfg_read, &mut client_data).await
+            }
             ModLoaderType::Forge => {
               cfg_read.mod_loader.status = ModLoaderStatus::Downloading;
               download_forge_libraries(app, &priority_list, &cfg_read, &mut client_data).await
