@@ -1,8 +1,9 @@
 use crate::account::commands::{
-  add_auth_server, add_player_offline, delete_auth_server, delete_player, refresh_player,
-  retrieve_auth_server_list, retrieve_other_launcher_account_info, retrieve_player_list,
-  update_player_skin_offline_preset,
+  add_auth_server, add_player_offline, delete_auth_server, delete_player, fetch_auth_server,
+  import_external_account_info, refresh_player, retrieve_auth_server_list,
+  retrieve_other_launcher_account_info, retrieve_player_list, update_player_skin_offline_preset,
 };
+use crate::account::helpers::import::misc::ACCESS_TOKEN_EXPIRED;
 use crate::account::models::{AccountError, Player, PresetRole};
 use crate::intelligence::mcp_server::launcher::McpContext;
 use crate::mcp_tool;
@@ -120,12 +121,15 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
     ),
     mcp_tool!(
       "add_auth_server",
-      add_auth_server,
-      "Add a 3rd-party authentication server by its normalized authlib-injector auth URL.",
+      "Fetch, validate, and add a 3rd-party authentication server from a user-provided URL.",
+      |app, params|
       #[serde(deny_unknown_fields)]
       {
-        #[schemars(description = "Authlib-injector authentication server URL.")]
+        #[schemars(description = "Authentication server URL or host to validate and add.")]
         auth_url: String,
+      } => async move {
+        let auth_server = fetch_auth_server(app.clone(), params.auth_url).await?;
+        add_auth_server(app, auth_server.auth_url).await
       }
     ),
     mcp_tool!(
@@ -147,8 +151,8 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
       }
     ),
     mcp_tool!(
-      "retrieve_other_launcher_account_info",
-      "Retrieve importable account information from another launcher. Supported launcher_type values: `HMCL`, `MultiMC`.",
+      "import_other_launcher_account_info",
+      "Retrieve account information from another launcher and import it directly into SJMCL. Supported launcher_type values: `HMCL`, `MultiMC`.",
       |app, params|
       #[serde(deny_unknown_fields)]
       {
@@ -161,13 +165,36 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
           _ => return Err(AccountError::Invalid.into()),
         };
 
-        let (mut players, auth_servers) =
-          retrieve_other_launcher_account_info(app, launcher_type).await?;
-        strip_sensitive_player_info(&mut players);
+        let (players, auth_servers) =
+          retrieve_other_launcher_account_info(app.clone(), launcher_type).await?;
+
+        let mut imported_players = Vec::new();
+        let mut expired_player_ids = Vec::new();
+        let mut expired_player_names = Vec::new();
+        for player in players {
+          if player.access_token.as_deref() == Some(ACCESS_TOKEN_EXPIRED) {
+            expired_player_ids.push(player.id);
+            expired_player_names.push(player.name);
+          } else {
+            imported_players.push(player);
+          }
+        }
+
+        let player_count = imported_players.len();
+        let auth_server_count = auth_servers.len();
+        let player_names = imported_players
+          .iter()
+          .map(|player| player.name.clone())
+          .collect::<Vec<_>>();
+
+        import_external_account_info(app.clone(), imported_players, auth_servers).await?;
 
         Ok(serde_json::json!({
-          "players": players,
-          "authServers": auth_servers,
+          "importedPlayers": player_count,
+          "importedPlayerNames": player_names,
+          "importedAuthServers": auth_server_count,
+          "ExpiredPlayers": expired_player_names.len(),
+          "ExpiredPlayerNames": expired_player_names,
         }))
       }
     ),
