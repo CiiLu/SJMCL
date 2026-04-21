@@ -335,6 +335,7 @@ export const ExtensionHostContextProvider: React.FC<{
           "delete_directory",
           "read_file",
           "write_file",
+          "schedule_progressive_task_group",
           "add_extension",
           "delete_extension",
         ].includes(command)
