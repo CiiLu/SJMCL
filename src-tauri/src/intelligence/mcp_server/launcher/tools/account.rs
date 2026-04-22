@@ -1,11 +1,8 @@
-use crate::account::commands::{
-  add_auth_server, add_player_offline, delete_auth_server, delete_player, fetch_auth_server,
-  import_external_account_info, refresh_player, retrieve_auth_server_list,
-  retrieve_other_launcher_account_info, retrieve_player_list, update_player_skin_offline_preset,
-};
+use crate::account::commands::*;
 use crate::account::helpers::import::misc::ACCESS_TOKEN_EXPIRED;
 use crate::account::models::{AccountError, Player, PresetRole};
 use crate::intelligence::mcp_server::launcher::McpContext;
+use crate::intelligence::mcp_server::model::MCPError;
 use crate::mcp_tool;
 use rmcp::handler::server::tool::ToolRoute;
 
@@ -98,7 +95,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         confirm: bool,
       } => async move {
         if !params.confirm {
-          return Err(AccountError::Invalid.into());
+          return Err(MCPError::ToolNeedsConfirmation.into());
         }
 
         delete_player(app, params.player_id).await
@@ -144,7 +141,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         confirm: bool,
       } => async move {
         if !params.confirm {
-          return Err(AccountError::Invalid.into());
+          return Err(MCPError::ToolNeedsConfirmation.into());
         }
 
         delete_auth_server(app, params.url)
@@ -169,32 +166,31 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
           retrieve_other_launcher_account_info(app.clone(), launcher_type).await?;
 
         let mut imported_players = Vec::new();
-        let mut expired_player_ids = Vec::new();
         let mut expired_player_names = Vec::new();
         for player in players {
           if player.access_token.as_deref() == Some(ACCESS_TOKEN_EXPIRED) {
-            expired_player_ids.push(player.id);
             expired_player_names.push(player.name);
           } else {
             imported_players.push(player);
           }
         }
 
-        let player_count = imported_players.len();
-        let auth_server_count = auth_servers.len();
-        let player_names = imported_players
+        let imported_player_count = imported_players.len();
+        let imported_auth_server_count = auth_servers.len();
+        let imported_player_names = imported_players
           .iter()
           .map(|player| player.name.clone())
           .collect::<Vec<_>>();
+        let expired_player_count = expired_player_names.len();
 
         import_external_account_info(app.clone(), imported_players, auth_servers).await?;
 
         Ok(serde_json::json!({
-          "importedPlayers": player_count,
-          "importedPlayerNames": player_names,
-          "importedAuthServers": auth_server_count,
-          "ExpiredPlayers": expired_player_names.len(),
-          "ExpiredPlayerNames": expired_player_names,
+          "importedPlayers": imported_player_count,
+          "importedPlayerNames": imported_player_names,
+          "importedAuthServers": imported_auth_server_count,
+          "expiredPlayers": expired_player_count,
+          "expiredPlayerNames": expired_player_names,
         }))
       }
     ),

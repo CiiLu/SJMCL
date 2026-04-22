@@ -33,7 +33,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
       |app, params|
       #[serde(deny_unknown_fields)]
       {
-        #[schemars(description = "News source requests. Each item contains a source endpoint URL and optional cursor for paginated loading.")]
+        #[schemars(description = "News source requests.")]
         requests: Vec<McpNewsPostRequest>,
       } => async move {
         let requests = params

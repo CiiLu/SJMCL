@@ -1,6 +1,6 @@
 use crate::extension::commands::{delete_extension, retrieve_extension_list};
-use crate::extension::models::ExtensionError;
 use crate::intelligence::mcp_server::launcher::McpContext;
+use crate::intelligence::mcp_server::model::MCPError;
 use crate::mcp_tool;
 use rmcp::handler::server::tool::ToolRoute;
 
@@ -29,7 +29,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         confirm: bool,
       } => async move {
         if !params.confirm {
-          return Err(ExtensionError::InvalidIdentifier.into());
+          return Err(MCPError::ToolNeedsConfirmation.into());
         }
 
         delete_extension(app, params.identifier)
