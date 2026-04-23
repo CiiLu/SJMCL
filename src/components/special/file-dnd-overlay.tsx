@@ -1,4 +1,4 @@
-import { Box, Center, Icon, Text, VStack } from "@chakra-ui/react";
+import { Box, Center, Flex, Icon, Text, VStack } from "@chakra-ui/react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
   createContext,
@@ -21,7 +21,13 @@ export type FileDnDRegistry = {
 };
 
 type Entry = { id: symbol; registries: FileDnDRegistry[] };
-type StackItem = { registry: FileDnDRegistry; rank: number };
+type IndexedItem = { registry: FileDnDRegistry; order: number };
+type MatchItem = {
+  registry: FileDnDRegistry;
+  path: string;
+  fileName: string;
+  order: number;
+};
 
 const FileDnDContext = createContext<null | {
   upsert: (id: symbol, registries: FileDnDRegistry | FileDnDRegistry[]) => void;
@@ -37,43 +43,58 @@ const getFileInfo = (path: string) => {
   };
 };
 
-const rebuildStacks = (entries: Entry[]) => {
-  const stacks = new Map<string, StackItem[]>();
-  let rank = 0;
+const rebuildRegistryIndex = (entries: Entry[]) => {
+  const index = new Map<string, IndexedItem[]>();
+  let order = 0;
 
   for (const entry of entries) {
     for (const registry of entry.registries) {
       for (const extension of registry.extensions) {
         const key = extension.trim().toLowerCase();
         if (!key) continue;
-        const stack = stacks.get(key);
-        const item = { registry, rank: rank++ };
-        if (stack) stack.push(item);
-        else stacks.set(key, [item]);
+        const items = index.get(key);
+        const item = { registry, order: order++ };
+        if (items) items.push(item);
+        else index.set(key, [item]);
       }
     }
   }
 
-  return stacks;
+  return index;
 };
 
-const findMatch = (paths: string[], stacks: Map<string, StackItem[]>) => {
-  // Prefer the latest registered handler among all matched extensions.
-  let best: {
-    registry: FileDnDRegistry;
-    path: string;
-    fileName: string;
-    rank: number;
-  } | null = null;
+const getMatches = (
+  paths: string[],
+  registryIndex: Map<string, IndexedItem[]>
+) => {
+  const matches = new Map<FileDnDRegistry, MatchItem>();
 
   for (const path of paths) {
     const { fileName, extension } = getFileInfo(path);
-    const item = stacks.get(extension)?.at(-1);
-    if (!item || (best && item.rank <= best.rank)) continue;
-    best = { registry: item.registry, path, fileName, rank: item.rank };
+    const items = registryIndex.get(extension);
+    if (!items) continue;
+
+    for (const item of items) {
+      const current = matches.get(item.registry);
+      if (current && current.order >= item.order) continue;
+      matches.set(item.registry, {
+        registry: item.registry,
+        path,
+        fileName,
+        order: item.order,
+      });
+    }
   }
 
-  return best;
+  return Array.from(matches.values()).sort((a, b) => a.order - b.order);
+};
+
+// support multiple handler, calc match by cursor position
+const getMatchIndex = (count: number, positionX: number) => {
+  if (count <= 1) return 0;
+  const totalWidth = Math.max(window.innerWidth, 1);
+  const clampedX = Math.min(Math.max(positionX, 0), totalWidth - 1);
+  return Math.min(count - 1, Math.floor((clampedX / totalWidth) * count));
 };
 
 export const useFileDnD = (registries: FileDnDRegistry | FileDnDRegistry[]) => {
@@ -97,11 +118,14 @@ export const FileDnDProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { t } = useTranslation();
-  const [dragPaths, setDragPaths] = useState<string[] | null>(null);
+  const [dragState, setDragState] = useState<{
+    paths: string[];
+    positionX: number;
+  } | null>(null);
   const entriesRef = useRef<Entry[]>([]);
-  const stacksRef = useRef<Map<string, StackItem[]>>(new Map());
+  const registryIndexRef = useRef<Map<string, IndexedItem[]>>(new Map());
 
-  // The provider maintains a list of registered handlers and their derived stacks for efficient lookup.
+  // The provider maintains a list of registered handlers and their derived extension index for lookup.
   const upsert = useCallback(
     (id: symbol, registries: FileDnDRegistry | FileDnDRegistry[]) => {
       const next = Array.isArray(registries) ? registries : [registries];
@@ -109,19 +133,23 @@ export const FileDnDProvider: React.FC<{ children: React.ReactNode }> = ({
       if (current) current.registries = next;
       else entriesRef.current.push({ id, registries: next });
       // Rebuild the extension lookup after every registry change.
-      stacksRef.current = rebuildStacks(entriesRef.current);
+      registryIndexRef.current = rebuildRegistryIndex(entriesRef.current);
     },
     []
   );
 
   const remove = useCallback((id: symbol) => {
     entriesRef.current = entriesRef.current.filter((item) => item.id !== id);
-    stacksRef.current = rebuildStacks(entriesRef.current);
+    registryIndexRef.current = rebuildRegistryIndex(entriesRef.current);
   }, []);
 
-  const activeMatch = dragPaths
-    ? findMatch(dragPaths, stacksRef.current)
-    : null;
+  const matches = dragState
+    ? getMatches(dragState.paths, registryIndexRef.current)
+    : [];
+  const activeIndex = dragState
+    ? getMatchIndex(matches.length, dragState.positionX)
+    : -1;
+  const activeMatch = activeIndex >= 0 ? matches[activeIndex] : null;
 
   // Listen to drag-drop events from the webview.
   useEffect(() => {
@@ -129,21 +157,42 @@ export const FileDnDProvider: React.FC<{ children: React.ReactNode }> = ({
 
     (async () => {
       const unlisten = await getCurrentWebview().onDragDropEvent((event) => {
-        if (event.payload.type === "leave") {
-          setDragPaths(null);
-          return;
-        }
-        if (event.payload.type !== "enter" && event.payload.type !== "drop") {
-          return;
-        }
-        if (event.payload.type === "enter") {
-          // Store incoming paths so the overlay can reflect the active handler.
-          setDragPaths(event.payload.paths);
+        const payload = event.payload;
+
+        if (payload.type === "leave") {
+          setDragState(null);
           return;
         }
 
-        const match = findMatch(event.payload.paths, stacksRef.current);
-        setDragPaths(null);
+        if (payload.type === "over") {
+          setDragState((current) =>
+            current
+              ? {
+                  ...current,
+                  positionX: payload.position.x,
+                }
+              : current
+          );
+          return;
+        }
+
+        if (payload.type !== "enter" && payload.type !== "drop") {
+          return;
+        }
+
+        if (payload.type === "enter") {
+          // Store incoming paths so the overlay can reflect the active handler.
+          setDragState({
+            paths: payload.paths,
+            positionX: payload.position.x,
+          });
+          return;
+        }
+
+        const dropMatches = getMatches(payload.paths, registryIndexRef.current);
+        const match =
+          dropMatches[getMatchIndex(dropMatches.length, payload.position.x)];
+        setDragState(null);
         if (!match) return;
 
         Promise.resolve(match.registry.onDrop(match.path)).catch((error) => {
@@ -159,14 +208,23 @@ export const FileDnDProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => cleanup?.();
   }, []);
 
-  const fileName = activeMatch?.fileName || "";
-  const title = activeMatch?.registry.titleKey
-    ? t(activeMatch.registry.titleKey, { fileName })
-    : t("General.import");
-  const desc = activeMatch?.registry.descKey
-    ? t(activeMatch.registry.descKey, { fileName })
-    : "";
-  const overlayIcon = activeMatch?.registry.icon || LuFileUp;
+  const isMultiMatch = matches.length > 1;
+  const displayMatches = isMultiMatch
+    ? matches
+    : activeMatch
+      ? [activeMatch]
+      : [];
+
+  const overlayItems = displayMatches.map((match) => ({
+    ...match,
+    title: match.registry.titleKey
+      ? t(match.registry.titleKey, { fileName: match.fileName })
+      : t("General.import"),
+    desc: match.registry.descKey
+      ? t(match.registry.descKey, { fileName: match.fileName })
+      : "",
+    icon: match.registry.icon || LuFileUp,
+  }));
 
   return (
     <FileDnDContext.Provider value={{ upsert, remove }}>
@@ -190,20 +248,33 @@ export const FileDnDProvider: React.FC<{ children: React.ReactNode }> = ({
             borderWidth="2px"
             borderStyle="dashed"
             borderColor="whiteAlpha.600"
+            overflow="hidden"
           >
-            <Center w="100%" h="100%">
-              <VStack spacing={2} maxW="min(480px, calc(100% - 32px))">
-                <Icon as={overlayIcon} boxSize={10} color="white" />
-                <Text color="white" fontSize="lg" fontWeight="600">
-                  {title}
-                </Text>
-                {desc && (
-                  <Text color="white" fontSize="sm" textAlign="center">
-                    {desc}
-                  </Text>
-                )}
-              </VStack>
-            </Center>
+            <Flex w="100%" h="100%">
+              {overlayItems.map((match, index) => {
+                return (
+                  <Center
+                    key={`${match.order}:${index}`}
+                    flex="1"
+                    px={6}
+                    bg={
+                      // multiple matches will show in a row, highlight the active one
+                      isMultiMatch && index === activeIndex
+                        ? "whiteAlpha.300"
+                        : "transparent"
+                    }
+                  >
+                    <VStack spacing={2} color="white" textAlign="center">
+                      <Icon as={match.icon} boxSize={10} />
+                      <Text fontSize="lg" fontWeight="500">
+                        {match.title}
+                      </Text>
+                      {match.desc && <Text fontSize="sm">{match.desc}</Text>}
+                    </VStack>
+                  </Center>
+                );
+              })}
+            </Flex>
           </Box>
         </>
       )}

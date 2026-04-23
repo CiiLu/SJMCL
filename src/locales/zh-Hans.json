@@ -835,7 +835,7 @@
   "ExtensionSettingsPage": {
     "alert": "SJMCL 无法控制第三方扩展的行为，包括它们如何管理你的个人数据。请仅安装并启用来自可信来源的扩展。",
     "fileDnD": {
-      "title": "添加 SJMCL 扩展",
+      "title": "安装 SJMCL 扩展",
       "desc": "将扩展文件 {{fileName}} 安装到 SJMCL"
     },
     "installed": "已安装扩展",
@@ -1441,7 +1441,7 @@
   },
   "InstanceModsPage": {
     "fileDnD": {
-      "title": "添加模组",
+      "title": "安装模组",
       "desc": "将模组文件 {{fileName}} 安装到当前实例"
     },
     "modLoaderList": {
@@ -1462,6 +1462,10 @@
     }
   },
   "InstanceResourcePacksPage": {
+    "fileDnD": {
+      "title": "添加资源包",
+      "desc": "将资源包文件 {{fileName}} 添加到当前实例"
+    },
     "resourcePackList": {
       "title": "全局资源包"
     },
@@ -1472,7 +1476,7 @@
   "InstanceSchematicsPage": {
     "fileDnD": {
       "title": "添加原理图",
-      "desc": "将原理图文件 {{fileName}} 安装到当前实例"
+      "desc": "将原理图文件 {{fileName}} 添加到当前实例"
     },
     "schematicList": {
       "title": "原理图",
@@ -1503,6 +1507,10 @@
     }
   },
   "InstanceShaderPacksPage": {
+    "fileDnD": {
+      "title": "添加光影包",
+      "desc": "将光影包文件 {{fileName}} 添加到当前实例"
+    },
     "shaderLoaderList": {
       "title": "加载器",
       "notInstalled": "未安装"
@@ -1534,6 +1542,10 @@
     }
   },
   "InstanceWorldsPage": {
+    "fileDnD": {
+      "title": "添加世界",
+      "desc": "将存档文件 {{fileName}} 添加到当前实例"
+    },
     "worldList": {
       "title": "本地世界",
       "lastPlayedAt": "上次游玩于",
