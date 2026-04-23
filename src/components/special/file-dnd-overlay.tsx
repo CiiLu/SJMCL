@@ -176,7 +176,7 @@ export const FileDnDProvider: React.FC<{ children: React.ReactNode }> = ({
           <Box
             position="absolute"
             inset={0}
-            zIndex={1400}
+            zIndex={1700} // higher than 1400 (Modal), same as toast
             pointerEvents="none"
             bg="blackAlpha.600"
             backdropFilter="blur(10px)"
@@ -184,7 +184,7 @@ export const FileDnDProvider: React.FC<{ children: React.ReactNode }> = ({
           <Box
             position="absolute"
             inset={4}
-            zIndex={1401}
+            zIndex={1701}
             pointerEvents="none"
             borderRadius="md"
             borderWidth="2px"
