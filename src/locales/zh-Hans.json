@@ -1479,8 +1479,7 @@
       "desc": "将原理图文件 {{fileName}} 添加到当前实例"
     },
     "schematicList": {
-      "title": "原理图",
-      "preview": "预览"
+      "title": "原理图"
     }
   },
   "InstanceScreenshotsPage": {

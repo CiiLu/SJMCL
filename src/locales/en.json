@@ -1479,8 +1479,7 @@
       "desc": "Add schematic file {{fileName}} to this instance"
     },
     "schematicList": {
-      "title": "Schematics",
-      "preview": "Preview"
+      "title": "Schematics"
     }
   },
   "InstanceScreenshotsPage": {
