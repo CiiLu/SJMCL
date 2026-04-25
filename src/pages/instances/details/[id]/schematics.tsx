@@ -10,8 +10,10 @@ import Empty from "@/components/common/empty";
 import { OptionItem, OptionItemGroup } from "@/components/common/option-item";
 import { Section } from "@/components/common/section";
 import { useFileDnD } from "@/components/special/file-dnd-overlay";
+import { useExtensionHost } from "@/contexts/extension/host";
 import { useInstanceSharedData } from "@/contexts/instance";
 import { useSharedModals } from "@/contexts/shared-modal";
+import { ExtensionUISlotKey } from "@/enums/extension";
 import { InstanceSubdirType } from "@/enums/instance";
 import { GetStateFlag } from "@/hooks/get-state";
 import { SchematicInfo } from "@/models/instance/misc";
@@ -19,11 +21,14 @@ import { SchematicInfo } from "@/models/instance/misc";
 const InstanceSchematicsPage = () => {
   const { t } = useTranslation();
   const {
+    instanceId,
+    summary,
     openInstanceSubdir,
     handleImportResource,
     getSchematicList,
     isSchematicListLoading: isLoading,
   } = useInstanceSharedData();
+  const { getExtensionSlotItems } = useExtensionHost();
   const { openSharedModal } = useSharedModals();
 
   const [schematics, setSchematics] = useState<SchematicInfo[]>([]);
@@ -84,6 +89,14 @@ const InstanceSchematicsPage = () => {
   ];
 
   const schemItemMenuOperations = (schematic: SchematicInfo) => [
+    ...getExtensionSlotItems(
+      ExtensionUISlotKey.InstanceSchematicItemMenuOperations,
+      {
+        schematic,
+        instanceId,
+        summary,
+      }
+    ),
     {
       label: "",
       icon: "copyOrMove",

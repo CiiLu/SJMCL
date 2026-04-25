@@ -12,8 +12,10 @@ import { OptionItem, OptionItemGroup } from "@/components/common/option-item";
 import { Section } from "@/components/common/section";
 import { useFileDnD } from "@/components/special/file-dnd-overlay";
 import { useLauncherConfig } from "@/contexts/config";
+import { useExtensionHost } from "@/contexts/extension/host";
 import { useInstanceSharedData } from "@/contexts/instance";
 import { useSharedModals } from "@/contexts/shared-modal";
+import { ExtensionUISlotKey } from "@/enums/extension";
 import { InstanceSubdirType } from "@/enums/instance";
 import { OtherResourceType } from "@/enums/resource";
 import { GetStateFlag } from "@/hooks/get-state";
@@ -25,6 +27,8 @@ const InstanceResourcePacksPage = () => {
   const { t } = useTranslation();
   const { config, update } = useLauncherConfig();
   const {
+    instanceId,
+    summary,
     openInstanceSubdir,
     handleImportResource,
     getResourcePackList,
@@ -32,6 +36,7 @@ const InstanceResourcePacksPage = () => {
     getServerResourcePackList,
     isServerResourcePackListLoading,
   } = useInstanceSharedData();
+  const { getExtensionSlotItems } = useExtensionHost();
   const accordionStates =
     config.states.instanceResourcePacksPage.accordionStates;
   const { openSharedModal } = useSharedModals();
@@ -153,6 +158,45 @@ const InstanceResourcePacksPage = () => {
     },
   };
 
+  const resourcePackItemMenuOperations = (pack: ResourcePackInfo) => [
+    ...getExtensionSlotItems(
+      ExtensionUISlotKey.InstanceResourcePackItemMenuOperations,
+      {
+        pack,
+        instanceId,
+        summary,
+      }
+    ),
+    {
+      icon: "copyOrMove",
+      onClick: () => {
+        openSharedModal("copy-or-move", {
+          srcResName: pack.name,
+          srcFilePath: pack.filePath,
+        });
+      },
+    },
+    {
+      icon: "revealFile",
+      onClick: () => revealItemInDir(pack.filePath),
+    },
+  ];
+
+  const serverResPackItemMenuOperations = (pack: ResourcePackInfo) => [
+    ...getExtensionSlotItems(
+      ExtensionUISlotKey.InstanceServerResPackItemMenuOperations,
+      {
+        pack,
+        instanceId,
+        summary,
+      }
+    ),
+    {
+      icon: "revealFile",
+      onClick: () => revealItemInDir(pack.filePath),
+    },
+  ];
+
   return (
     <>
       {Object.entries(renderSections).map(([key, value], index) => {
@@ -216,21 +260,17 @@ const InstanceResourcePacksPage = () => {
                     }
                   >
                     <HStack spacing={0}>
-                      {value.locale === "resourcePackList" && (
+                      {(value.locale === "resourcePackList"
+                        ? resourcePackItemMenuOperations(pack)
+                        : serverResPackItemMenuOperations(pack)
+                      ).map((item, index) => (
                         <CommonIconButton
-                          icon="copyOrMove"
-                          onClick={() => {
-                            openSharedModal("copy-or-move", {
-                              srcResName: pack.name,
-                              srcFilePath: pack.filePath,
-                            });
-                          }}
+                          key={index}
+                          icon={item.icon}
+                          label={item.label}
+                          onClick={item.onClick}
                         />
-                      )}
-                      <CommonIconButton
-                        icon="revealFile"
-                        onClick={() => revealItemInDir(pack.filePath)}
-                      />
+                      ))}
                     </HStack>
                   </OptionItem>
                 ))}

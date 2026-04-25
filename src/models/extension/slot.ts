@@ -1,27 +1,63 @@
 import type { MouseEventHandler } from "react";
 import type { IconType } from "react-icons";
 import { type ExtensionSlotKey, ExtensionUISlotKey } from "@/enums/extension";
-import type { InstanceSummary } from "@/models/instance/misc";
+import type {
+  GameServerInfo,
+  InstanceSummary,
+  LocalModInfo,
+  ResourcePackInfo,
+  SchematicInfo,
+  ShaderPackInfo,
+} from "@/models/instance/misc";
 import type { WorldInfo } from "@/models/instance/world";
 import type { ExtensionContributionBase } from "./contribution";
 
-export interface CommonIconButtonSlotItem {
+interface ExtensionInstanceSlotContextBase {
+  instanceId: string | undefined;
+  summary: InstanceSummary | undefined;
+}
+
+export type ExtensionSlotContextMap = {
+  [ExtensionUISlotKey.InstanceWorldItemMenuOperations]: ExtensionInstanceSlotContextBase & {
+    save: WorldInfo;
+  };
+  [ExtensionUISlotKey.InstanceServerItemMenuOperations]: ExtensionInstanceSlotContextBase & {
+    server: GameServerInfo;
+  };
+  [ExtensionUISlotKey.InstanceModItemMenuOperations]: ExtensionInstanceSlotContextBase & {
+    mod: LocalModInfo;
+  };
+  [ExtensionUISlotKey.InstanceSchematicItemMenuOperations]: ExtensionInstanceSlotContextBase & {
+    schematic: SchematicInfo;
+  };
+  [ExtensionUISlotKey.InstanceShaderPackItemMenuOperations]: ExtensionInstanceSlotContextBase & {
+    pack: ShaderPackInfo;
+  };
+} & {
+  [K in
+    | ExtensionUISlotKey.InstanceResourcePackItemMenuOperations
+    | ExtensionUISlotKey.InstanceServerResPackItemMenuOperations]: ExtensionInstanceSlotContextBase & {
+    pack: ResourcePackInfo;
+  };
+};
+
+interface CommonIconButtonSlotItem {
   icon: string | IconType;
   label?: string;
   onClick?: MouseEventHandler<HTMLButtonElement>;
+  danger?: boolean;
 }
 
-export interface ExtensionSlotContextMap {
-  [ExtensionUISlotKey.InstanceWorldItemMenuOperations]: {
-    save: WorldInfo;
-    instanceId: string | undefined;
-    summary: InstanceSummary | undefined;
-  };
-}
-
-export interface ExtensionSlotItemMap {
-  [ExtensionUISlotKey.InstanceWorldItemMenuOperations]: CommonIconButtonSlotItem;
-}
+export type ExtensionSlotItemMap = {
+  [K in
+    | ExtensionUISlotKey.InstanceWorldItemMenuOperations
+    | ExtensionUISlotKey.InstanceServerItemMenuOperations
+    | ExtensionUISlotKey.InstanceModItemMenuOperations
+    | ExtensionUISlotKey.InstanceResourcePackItemMenuOperations
+    | ExtensionUISlotKey.InstanceServerResPackItemMenuOperations
+    | ExtensionUISlotKey.InstanceSchematicItemMenuOperations
+    | ExtensionUISlotKey.InstanceShaderPackItemMenuOperations]: CommonIconButtonSlotItem;
+};
 
 export interface ExtensionSlotDefinition<K extends ExtensionSlotKey> {
   getItems: (context: ExtensionSlotContextMap[K]) => ExtensionSlotItemMap[K][];
