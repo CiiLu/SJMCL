@@ -815,7 +815,7 @@ export const ExtensionHostContextProvider: React.FC<{
       Object.fromEntries(
         Object.entries(prev).filter(
           ([modalIdentifier]) =>
-            !modalIdentifier.startsWith(`${identifier}:modal:`)
+            !modalIdentifier.startsWith(`${identifier}:modal`)
         )
       )
     );
@@ -1591,10 +1591,19 @@ export const ExtensionHostContextProvider: React.FC<{
           } = modal;
 
           const close = () => {
-            setCustomModalStates((prev) => {
-              const { [modalIdentifier]: _, ...next } = prev;
-              return next;
-            });
+            try {
+              modal.onClose?.(); // trigger extension-defined onClose callback if exists.
+            } catch (error) {
+              logger.error(
+                `Extension custom modal onClose failed for ${modal.extension.identifier}:${modal.key}`,
+                error
+              );
+            } finally {
+              setCustomModalStates((prev) => {
+                const { [modalIdentifier]: _, ...next } = prev;
+                return next;
+              });
+            }
           };
 
           return (

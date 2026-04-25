@@ -26,7 +26,7 @@ export interface ExtensionPageDefinition extends ExtensionBaseDefinition {
 
 export interface ExtensionModalDefinition
   extends
-    Omit<ModalProps, "children">,
+    Omit<ModalProps, "children" | "isOpen">,
     ExtensionBaseDefinition<{
       params?: any;
       close: () => void;
