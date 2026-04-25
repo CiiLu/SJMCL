@@ -812,6 +812,7 @@
     "failedToRender": "扩展内容渲染失败。"
   },
   "ExtensionHostContextProvider": {
+    "extensionProvidedDialog": "当前对话框由扩展 {{name}} 提供",
     "toast": {
       "activateError": "激活扩展 {{name}} 失败"
     }
