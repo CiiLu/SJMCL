@@ -44,9 +44,11 @@ import CheckModUpdateModal from "@/components/modals/check-mod-update-modal";
 import ModInfoModal from "@/components/modals/mod-info-modal";
 import { useFileDnD } from "@/components/special/file-dnd-overlay";
 import { useLauncherConfig } from "@/contexts/config";
+import { useExtensionHost } from "@/contexts/extension/host";
 import { useInstanceSharedData } from "@/contexts/instance";
 import { useSharedModals } from "@/contexts/shared-modal";
 import { useToast } from "@/contexts/toast";
+import { ExtensionUISlotKey } from "@/enums/extension";
 import { InstanceSubdirType, ModLoaderType } from "@/enums/instance";
 import { OtherResourceType } from "@/enums/resource";
 import { InstanceError } from "@/enums/service-error";
@@ -62,12 +64,14 @@ const InstanceModsPage = () => {
   const { t } = useTranslation();
   const toast = useToast();
   const {
+    instanceId,
     summary,
     openInstanceSubdir,
     handleImportResource,
     getLocalModList,
     isLocalModListLoading: isLoading,
   } = useInstanceSharedData();
+  const { getExtensionSlotItems } = useExtensionHost();
   const { config, update } = useLauncherConfig();
   const { openSharedModal, openGenericConfirmDialog } = useSharedModals();
   const primaryColor = config.appearance.theme.primaryColor;
@@ -335,6 +339,11 @@ const InstanceModsPage = () => {
   ];
 
   const modItemMenuOperations = (mod: LocalModInfo) => [
+    ...getExtensionSlotItems(ExtensionUISlotKey.InstanceModItemMenuOperations, {
+      mod,
+      instanceId,
+      summary,
+    }),
     ...(mod.potentialIncompatibility
       ? [
           {

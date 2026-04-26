@@ -149,6 +149,7 @@ export class InstanceService {
    * @param {string} instanceId - The instance ID.
    * @param {InstanceSubdirType} dirType - The directory type.
    * @param {string} path - Relative path under the instance directory.
+   * @param {"string" | "base64"} [mode="string"] - Read mode, default=`string`; `string` reads UTF-8 text, while `base64` returns binary bytes encoded as base64.
    * @returns {Promise<InvokeResponse<string>>}
    *
    * This command is mainly designed for extensions, CLI and external agents.
@@ -157,12 +158,14 @@ export class InstanceService {
   static async readInstanceFile(
     instanceId: string,
     dirType: InstanceSubdirType,
-    path: string
+    path: string,
+    mode?: "string" | "base64"
   ): Promise<InvokeResponse<string>> {
     return await invoke("read_instance_file", {
       instanceId,
       dirType,
       path,
+      mode,
     });
   }
 

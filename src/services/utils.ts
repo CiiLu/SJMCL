@@ -73,27 +73,33 @@ export class UtilsService {
   }
 
   /**
-   * READ a UTF-8 text file by absolute path.
+   * READ a file by absolute path.
    * @param path the file to read.
+   * @param {"string" | "base64"} [mode="string"] - `string` reads UTF-8 text, while `base64` returns binary bytes encoded as base64.
    * @returns {Promise<InvokeResponse<string>>}
    */
   @responseHandler("utils")
-  static async readFile(path: string): Promise<InvokeResponse<string>> {
-    return await invoke("read_file", { path });
+  static async readFile(
+    path: string,
+    mode?: "string" | "base64"
+  ): Promise<InvokeResponse<string>> {
+    return await invoke("read_file", { path, mode });
   }
 
   /**
-   * WRITE a UTF-8 text file by absolute path.
+   * WRITE a file by absolute path.
    * This method overwrites the target file if it already exists.
    * @param path the file to write.
-   * @param content the text content to write.
+   * @param content the file content to write.
+   * @param {"string" | "base64"} [mode="string"] - `string` writes UTF-8 text, while `base64` decodes base64 content into binary bytes before writing.
    * @returns {Promise<InvokeResponse<void>>}
    */
   @responseHandler("utils")
   static async writeFile(
     path: string,
-    content: string
+    content: string,
+    mode?: "string" | "base64"
   ): Promise<InvokeResponse<void>> {
-    return await invoke("write_file", { path, content });
+    return await invoke("write_file", { path, content, mode });
   }
 }

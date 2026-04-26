@@ -1,7 +1,8 @@
-use crate::error::SJMCLResult;
+use crate::error::{SJMCLError, SJMCLResult};
 use crate::launcher_config::models::{LauncherConfigError, MemoryInfo};
 use crate::utils::fs::extract_filename as extract_filename_helper;
 use crate::utils::sys_info::get_memory_info;
+use base64::{engine::general_purpose, Engine};
 use font_loader::system_fonts;
 use std::fs;
 use tauri_plugin_http::reqwest;
@@ -61,14 +62,25 @@ pub fn delete_directory(path: String) -> SJMCLResult<()> {
 }
 
 #[tauri::command]
-pub fn read_file(path: String) -> SJMCLResult<String> {
-  fs::read_to_string(&path).map_err(Into::into)
+pub fn read_file(path: String, mode: Option<String>) -> SJMCLResult<String> {
+  match mode.unwrap_or_else(|| "string".to_string()).as_str() {
+    "string" => fs::read_to_string(&path).map_err(Into::into),
+    "base64" => fs::read(&path)
+      .map(|bytes| general_purpose::STANDARD.encode(bytes))
+      .map_err(Into::into),
+    value => Err(SJMCLError(format!("Unsupported mode: {value}"))),
+  }
 }
 
 #[tauri::command]
-pub fn write_file(path: String, content: String) -> SJMCLResult<()> {
+pub fn write_file(path: String, content: String, mode: Option<String>) -> SJMCLResult<()> {
   if let Some(parent) = std::path::Path::new(&path).parent() {
     fs::create_dir_all(parent)?;
   }
-  fs::write(&path, content).map_err(Into::into)
+
+  match mode.unwrap_or_else(|| "string".to_string()).as_str() {
+    "string" => fs::write(&path, content).map_err(Into::into),
+    "base64" => fs::write(&path, general_purpose::STANDARD.decode(content)?).map_err(Into::into),
+    value => Err(SJMCLError(format!("Unsupported mode: {value}"))),
+  }
 }

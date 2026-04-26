@@ -242,6 +242,7 @@ pub fn read_instance_file(
   instance_id: String,
   dir_type: InstanceSubdirType,
   path: String,
+  mode: Option<String>,
 ) -> SJMCLResult<String> {
   let subdir = retrieve_instance_subdir_path(app, instance_id, dir_type)?;
   let relative_path =
@@ -252,7 +253,8 @@ pub fn read_instance_file(
   if !cano_target.starts_with(&cano_subdir) {
     return Err(InstanceError::InvalidSourcePath.into());
   }
-  fs::read_to_string(cano_target).map_err(Into::into)
+
+  crate::utils::commands::read_file(cano_target.to_string_lossy().into_owned(), mode)
 }
 
 #[tauri::command]

@@ -812,6 +812,7 @@
     "failedToRender": "Failed to render this extension content."
   },
   "ExtensionHostContextProvider": {
+    "extensionProvidedDialog": "This dialog is provided by extension {{name}}",
     "toast": {
       "activateError": "Failed to activate extension {{name}}"
     }

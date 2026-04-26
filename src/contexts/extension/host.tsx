@@ -18,23 +18,29 @@ import React, {
 import { OptionItem, OptionItemGroup } from "@/components/common/option-item";
 import { Section } from "@/components/common/section";
 import { WrapCard, WrapCardGroup } from "@/components/common/wrap-card";
+import ExtensionContributionWrapper from "@/components/extension/contribution-wrapper";
 import { useLauncherConfig } from "@/contexts/config";
 import { useGlobalData } from "@/contexts/global-data";
 import { useSharedModals } from "@/contexts/shared-modal";
 import { useToast } from "@/contexts/toast";
+import { type ExtensionSlotKey, ExtensionUISlotKey } from "@/enums/extension";
 import { useGetState } from "@/hooks/get-state";
 import {
   ExtensionAbilityActions,
   ExtensionAbilityApi,
   ExtensionAbilityData,
   ExtensionAbilityState,
+  ExtensionContributionRegistration,
   ExtensionHomeWidgetContribution,
-  ExtensionHomeWidgetDefinition,
   ExtensionInfo,
+  ExtensionModalContribution,
   ExtensionPageContribution,
-  ExtensionPageDefinition,
   ExtensionSettingsPageContribution,
-  ExtensionSettingsPageDefinition,
+  ExtensionSlotContextMap,
+  ExtensionSlotContributionRegistry,
+  ExtensionSlotDefinition,
+  ExtensionSlotItemMap,
+  ExtensionSlotRegistry,
 } from "@/models/extension";
 import { TaskTypeEnums } from "@/models/task";
 import { ExtensionService } from "@/services/extension";
@@ -45,12 +51,8 @@ import { sanitizeFileName } from "@/utils/string";
 import { createWindow } from "@/utils/window";
 import { buildProxiedExtensionScript } from "./proxy";
 
-interface ExtensionContextRegistration {
-  homeWidget?: ExtensionHomeWidgetDefinition;
-  homeWidgets?: ExtensionHomeWidgetDefinition[];
-  settingsPage?: ExtensionSettingsPageDefinition;
-  page?: ExtensionPageDefinition;
-  pages?: ExtensionPageDefinition[];
+interface ExtensionContextRegistration extends ExtensionContributionRegistration {
+  slots?: ExtensionSlotRegistry;
   dispose?: () => void;
 }
 
@@ -83,6 +85,11 @@ interface ActiveExtensionRecord {
   dispose?: () => void;
   scriptElement?: HTMLScriptElement;
   signature: string;
+}
+
+interface ExtensionCustomModalState {
+  isOpen: boolean;
+  params: any;
 }
 
 interface PendingRegistration {
@@ -139,6 +146,10 @@ interface ExtensionHostContextType {
     routePath: string,
     isStandAlone?: boolean
   ) => ExtensionPageContribution | undefined;
+  getExtensionSlotItems: <K extends ExtensionSlotKey>(
+    key: K,
+    context: ExtensionSlotContextMap[K]
+  ) => ExtensionSlotItemMap[K][];
   // host control methods.
   getExtensionList: (sync?: boolean) => ExtensionInfo[] | undefined;
   handleAddExtension: (path: string) => Promise<void>;
@@ -353,6 +364,16 @@ export const ExtensionHostContextProvider: React.FC<{
   >({});
   const [pageMap, setPageMap] = useState<
     Record<string, ExtensionPageContribution[]>
+  >({});
+  const [customModalMap, setCustomModalMap] = useState<
+    Record<string, ExtensionModalContribution[]>
+  >({});
+  const [slotMap, setSlotMap] = useState<
+    Record<string, ExtensionSlotContributionRegistry>
+  >({});
+
+  const [customModalStates, setCustomModalStates] = useState<
+    Record<string, ExtensionCustomModalState>
   >({});
 
   // pending registration, active extensions, and per-extension state stores/listeners.
@@ -706,6 +727,64 @@ export const ExtensionHostContextProvider: React.FC<{
     [pageMap]
   );
 
+  const handleOpenCustomModal = useCallback(
+    (extension: ExtensionInfo, key: string, params?: any) => {
+      const normalizedKey = key.trim();
+      if (!normalizedKey || normalizedKey.includes(":")) {
+        throw new Error(`Invalid custom modal key: ${key}`);
+      }
+
+      const modal = customModalMap[extension.identifier]?.find(
+        (item) => item.key === normalizedKey
+      );
+      if (!modal) {
+        logger.warn(
+          `Unknown custom modal for extension ${extension.identifier}: ${key}; registered keys: ${(customModalMap[extension.identifier] || []).map((item) => item.key).join(", ")}`
+        );
+        throw new Error(
+          `Unknown custom modal for extension ${extension.identifier}: ${key}`
+        );
+      }
+
+      setCustomModalStates((prev) => ({
+        ...prev,
+        [modal.identifier]: {
+          isOpen: true,
+          params: params === undefined ? modal.params : params,
+        },
+      }));
+    },
+    [customModalMap]
+  );
+
+  const handleOpenCustomModalRef = useRef(handleOpenCustomModal);
+  handleOpenCustomModalRef.current = handleOpenCustomModal;
+
+  const getExtensionSlotItems = useCallback(
+    <K extends ExtensionSlotKey>(
+      key: K,
+      context: ExtensionSlotContextMap[K]
+    ) => {
+      if (!enabledExtensionList) {
+        return [];
+      }
+
+      return enabledExtensionList.flatMap((extension) => {
+        try {
+          return (slotMap[extension.identifier]?.[key]?.getItems(context) ||
+            []) as ExtensionSlotItemMap[K][];
+        } catch (error) {
+          logger.error(
+            `Failed to resolve extension slot ${key} for ${extension.identifier}`,
+            error
+          );
+          return [];
+        }
+      });
+    },
+    [enabledExtensionList, slotMap]
+  );
+
   const removeExtensionContributionState = useCallback((identifier: string) => {
     setHomeWidgetMap((prev) => {
       const next = { ...prev };
@@ -722,6 +801,24 @@ export const ExtensionHostContextProvider: React.FC<{
       delete next[identifier];
       return next;
     });
+    setCustomModalMap((prev) => {
+      const next = { ...prev };
+      delete next[identifier];
+      return next;
+    });
+    setSlotMap((prev) => {
+      const next = { ...prev };
+      delete next[identifier];
+      return next;
+    });
+    setCustomModalStates((prev) =>
+      Object.fromEntries(
+        Object.entries(prev).filter(
+          ([modalIdentifier]) =>
+            !modalIdentifier.startsWith(`${identifier}:modal`)
+        )
+      )
+    );
 
     delete extensionStateStoreRef.current[identifier];
     delete extensionStateListenerRef.current[identifier];
@@ -866,14 +963,22 @@ export const ExtensionHostContextProvider: React.FC<{
         await openExternalLink(extension, url),
       openSharedModal: (key, params) =>
         hostActionRefs.current.openSharedModal(key, params),
+      openCustomModal: (key, params) =>
+        handleOpenCustomModalRef.current(extension, key, params),
       request,
       requestText,
       invoke,
-      readFile: async (path: string) =>
-        runExtensionFileCommand(extension, path, UtilsService.readFile),
-      writeFile: async (path: string, content: string) => {
+      readFile: async (path: string, mode?: "string" | "base64") =>
+        runExtensionFileCommand(extension, path, (fullPath) =>
+          UtilsService.readFile(fullPath, mode)
+        ),
+      writeFile: async (
+        path: string,
+        content: string,
+        mode?: "string" | "base64"
+      ) => {
         await runExtensionFileCommand(extension, path, (fullPath) =>
-          UtilsService.writeFile(fullPath, content)
+          UtilsService.writeFile(fullPath, content, mode)
         );
       },
       deleteFile: async (path: string) => {
@@ -1074,6 +1179,7 @@ export const ExtensionHostContextProvider: React.FC<{
       const registration = (factory(api) || {}) as ExtensionContextRegistration;
 
       // Normalize extension-declared contributions into host-owned runtime maps.
+      // -------- home-widget --------
       const homeWidgetDefinitions = [
         ...(registration.homeWidget ? [registration.homeWidget] : []),
         ...(registration.homeWidgets || []),
@@ -1102,6 +1208,7 @@ export const ExtensionHostContextProvider: React.FC<{
         });
       }
 
+      // ------- settings-page -------
       if (registration.settingsPage) {
         setSettingsPageMap((prev) => ({
           ...prev,
@@ -1120,6 +1227,7 @@ export const ExtensionHostContextProvider: React.FC<{
         });
       }
 
+      // -------- custom-page --------
       const pageDefinitions = [
         ...(registration.page ? [registration.page] : []),
         ...(registration.pages || []),
@@ -1162,6 +1270,96 @@ export const ExtensionHostContextProvider: React.FC<{
         }
       } else {
         setPageMap((prev) => {
+          const next = { ...prev };
+          delete next[extension.identifier];
+          return next;
+        });
+      }
+
+      // ------- custom-modal -------
+      const customModalDefinitions = [
+        ...(registration.customModal ? [registration.customModal] : []),
+        ...(registration.customModals || []),
+      ];
+
+      if (customModalDefinitions.length > 0) {
+        const modalKeySet = new Set<string>();
+        const modals = customModalDefinitions.flatMap((modal, index) => {
+          const normalizedKey = modal.key?.trim();
+          if (!normalizedKey || normalizedKey.includes(":")) {
+            logger.error(
+              `Invalid custom modal key for extension ${extension.identifier}: ${modal.key}`
+            );
+            return [];
+          }
+
+          if (modalKeySet.has(normalizedKey)) {
+            logger.error(
+              `Duplicate custom modal key for extension ${extension.identifier}: ${normalizedKey}`
+            );
+            return [];
+          }
+
+          modalKeySet.add(normalizedKey);
+
+          return [
+            {
+              ...modal,
+              key: normalizedKey,
+              identifier:
+                customModalDefinitions.length === 1
+                  ? `${extension.identifier}:modal`
+                  : `${extension.identifier}:modal:${normalizedKey || index}`,
+              resetKey: `${extension.identifier}:${signature}:modal:${normalizedKey}:${index}`,
+              extension,
+            },
+          ];
+        });
+
+        if (modals.length > 0) {
+          setCustomModalMap((prev) => ({
+            ...prev,
+            [extension.identifier]: modals,
+          }));
+        } else {
+          setCustomModalMap((prev) => {
+            const next = { ...prev };
+            delete next[extension.identifier];
+            return next;
+          });
+        }
+      } else {
+        setCustomModalMap((prev) => {
+          const next = { ...prev };
+          delete next[extension.identifier];
+          return next;
+        });
+      }
+
+      // ------------ slots ------------
+      const slotEntries = Object.entries(registration.slots || {}).filter(
+        ([key]) =>
+          Object.values(ExtensionUISlotKey).includes(key as ExtensionUISlotKey)
+      ) as [ExtensionSlotKey, ExtensionSlotDefinition<ExtensionSlotKey>][];
+
+      if (slotEntries.length > 0) {
+        setSlotMap((prev) => ({
+          ...prev,
+          [extension.identifier]: Object.fromEntries(
+            slotEntries.map(([key, slot], index) => [
+              key,
+              {
+                ...slot,
+                key,
+                identifier: `${extension.identifier}:slot:${key}`,
+                resetKey: `${extension.identifier}:${signature}:slot:${key}:${index}`,
+                extension,
+              },
+            ])
+          ),
+        }));
+      } else {
+        setSlotMap((prev) => {
           const next = { ...prev };
           delete next[extension.identifier];
           return next;
@@ -1338,6 +1536,7 @@ export const ExtensionHostContextProvider: React.FC<{
       homeWidgets,
       getExtensionSettingsPage,
       getExtensionPage,
+      getExtensionSlotItems,
       getExtensionList,
       handleAddExtension,
     }),
@@ -1355,6 +1554,7 @@ export const ExtensionHostContextProvider: React.FC<{
       homeWidgets,
       getExtensionSettingsPage,
       getExtensionPage,
+      getExtensionSlotItems,
       getExtensionList,
       handleAddExtension,
     ]
@@ -1363,6 +1563,77 @@ export const ExtensionHostContextProvider: React.FC<{
   return (
     <ExtensionHostContext.Provider value={contextValue}>
       {children}
+
+      {/* Extension host managed custom modal, acted like Shared Modal Context */}
+      {Object.entries(customModalStates).map(
+        ([modalIdentifier, modalState]) => {
+          if (!modalState.isOpen) {
+            return null;
+          }
+
+          const modal = Object.values(customModalMap)
+            .flat()
+            .find((item) => item.identifier === modalIdentifier);
+          if (!modal) {
+            return null;
+          }
+
+          // Exclude host-only fields so only modal props are forwarded to ChakraUI.Modal.
+          const {
+            Component: ModalComponent,
+            extension: _extension,
+            identifier: _identifier,
+            key: _key,
+            params: _params,
+            resetKey: _resetKey,
+            title,
+            ...modalProps
+          } = modal;
+
+          const close = () => {
+            try {
+              modal.onClose?.(); // trigger extension-defined onClose callback if exists.
+            } catch (error) {
+              logger.error(
+                `Extension custom modal onClose failed for ${modal.extension.identifier}:${modal.key}`,
+                error
+              );
+            } finally {
+              setCustomModalStates((prev) => {
+                const { [modalIdentifier]: _, ...next } = prev;
+                return next;
+              });
+            }
+          };
+
+          return (
+            <ChakraUI.Modal
+              {...modalProps}
+              key={modal.resetKey}
+              isOpen={modalState.isOpen}
+              onClose={close}
+            >
+              <ChakraUI.ModalOverlay />
+              <ChakraUI.ModalContent>
+                <ChakraUI.ModalHeader>{title}</ChakraUI.ModalHeader>
+                <ChakraUI.ModalCloseButton />
+                <ChakraUI.ModalBody>
+                  <ExtensionContributionWrapper resetKey={modal.resetKey}>
+                    <ModalComponent params={modalState.params} close={close} />
+                  </ExtensionContributionWrapper>
+                </ChakraUI.ModalBody>
+                <ChakraUI.ModalFooter justifyContent="center">
+                  <ChakraUI.Text fontSize="xs" className="secondary-text">
+                    {t("ExtensionHostContextProvider.extensionProvidedDialog", {
+                      name: modal.extension.name,
+                    })}
+                  </ChakraUI.Text>
+                </ChakraUI.ModalFooter>
+              </ChakraUI.ModalContent>
+            </ChakraUI.Modal>
+          );
+        }
+      )}
     </ExtensionHostContext.Provider>
   );
 };
