@@ -35,7 +35,8 @@ static KEY_PAIR: OnceLock<(RsaPrivateKey, RsaPublicKey)> = OnceLock::new();
 
 fn generate_key_pair() -> (RsaPrivateKey, RsaPublicKey) {
   let mut rng = rand_core::OsRng;
-  let bits = 4096;
+  // 4096-bit RSA generation is noticeably slow in unoptimized debug builds.
+  let bits = if cfg!(debug_assertions) { 2048 } else { 4096 };
   let private_key = RsaPrivateKey::new(&mut rng, bits).expect("Failed to generate private key");
   let public_key = RsaPublicKey::from(&private_key);
   (private_key, public_key)
