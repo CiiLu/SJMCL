@@ -338,6 +338,25 @@ export const ExtensionHostContextProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const router = useRouter();
+
+  if (
+    router.pathname === "/standalone/game-log" ||
+    router.pathname === "/standalone/game-error"
+  ) {
+    return <>{children}</>;
+  }
+
+  return (
+    <ActiveExtensionHostContextProvider>
+      {children}
+    </ActiveExtensionHostContextProvider>
+  );
+};
+
+const ActiveExtensionHostContextProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
+  const router = useRouter();
   const { config, update } = useLauncherConfig();
   const { selectedPlayer, selectedInstance, getPlayerList, getInstanceList } =
     useGlobalData();
