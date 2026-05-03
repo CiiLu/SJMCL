@@ -36,7 +36,7 @@ import { OtherResourceSource, OtherResourceType } from "@/enums/resource";
 import { OtherResourceInfo } from "@/models/resource";
 import { ResourceService } from "@/services/resource";
 import { generatePlayerDesc } from "@/utils/account";
-import { generateInstanceDesc } from "@/utils/instance";
+import { generateInstanceDesc, getInstanceIconSrc } from "@/utils/instance";
 import { translateTag } from "@/utils/resource";
 
 interface SearchResult {
@@ -169,7 +169,10 @@ const SpotlightSearchModal: React.FC<Omit<ModalProps, "children">> = ({
             (instance) =>
               ({
                 type: "instance",
-                icon: instance.iconSrc,
+                icon: getInstanceIconSrc(
+                  instance.iconSrc,
+                  instance.versionPath
+                ),
                 title: instance.name,
                 description: generateInstanceDesc(instance),
                 url: `/instances/details/${encodeURIComponent(instance.id)}`,
