@@ -1,7 +1,85 @@
 use crate::instance::commands::*;
+use crate::instance::models::misc::{InstanceError, ModLoaderType};
 use crate::intelligence::mcp_server::launcher::McpContext;
+use crate::launcher_config::models::GameDirectory;
 use crate::mcp_tool;
+use crate::resource::commands::{
+  fetch_game_version_specific, fetch_mod_loader_version_list, fetch_optifine_version_list,
+};
+use crate::resource::models::{ModLoaderResourceInfo, OptiFineResourceInfo, ResourceError};
 use rmcp::handler::server::tool::ToolRoute;
+use std::path::PathBuf;
+use std::str::FromStr;
+
+fn parse_mod_loader_type(
+  loader_type: Option<String>,
+) -> Result<ModLoaderType, crate::error::SJMCLError> {
+  match loader_type {
+    Some(loader_type) if !loader_type.trim().is_empty() => {
+      ModLoaderType::from_str(&loader_type).map_err(|_| ResourceError::NoDownloadApi.into())
+    }
+    _ => Ok(ModLoaderType::Unknown),
+  }
+}
+
+async fn resolve_mod_loader(
+  app: tauri::AppHandle,
+  game_version: String,
+  loader_type: ModLoaderType,
+  loader_version: Option<String>,
+) -> Result<ModLoaderResourceInfo, crate::error::SJMCLError> {
+  if loader_type == ModLoaderType::Unknown {
+    return Ok(ModLoaderResourceInfo {
+      loader_type: ModLoaderType::Unknown,
+      version: String::new(),
+      description: String::new(),
+      stable: true,
+      branch: None,
+    });
+  }
+
+  let versions = fetch_mod_loader_version_list(app, game_version, loader_type).await?;
+  if let Some(loader_version) = loader_version.filter(|version| !version.trim().is_empty()) {
+    return versions
+      .into_iter()
+      .find(|item| item.version == loader_version)
+      .ok_or_else(|| ResourceError::ParseError.into());
+  }
+
+  versions
+    .iter()
+    .find(|item| item.stable)
+    .cloned()
+    .or_else(|| versions.into_iter().next())
+    .ok_or_else(|| ResourceError::ParseError.into())
+}
+
+async fn resolve_optifine(
+  app: tauri::AppHandle,
+  game_version: String,
+  optifine_version: Option<String>,
+) -> Result<Option<OptiFineResourceInfo>, crate::error::SJMCLError> {
+  let Some(optifine_version) = optifine_version.filter(|version| !version.trim().is_empty()) else {
+    return Ok(None);
+  };
+
+  let versions = fetch_optifine_version_list(app, game_version).await?;
+  versions
+    .into_iter()
+    .find(|item| item.patch == optifine_version || item.filename == optifine_version)
+    .map(Some)
+    .ok_or_else(|| ResourceError::ParseError.into())
+}
+
+fn default_icon_for_game_type(game_type: &str) -> String {
+  match game_type {
+    "snapshot" => "/images/icons/JEIcon_Snapshot.png",
+    "old_beta" => "/images/icons/StoneOldBeta.png",
+    "april_fools" => "/images/icons/YellowGlazedTerracotta.png",
+    _ => "/images/icons/JEIcon_Release.png",
+  }
+  .to_string()
+}
 
 pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
   vec![
@@ -9,6 +87,79 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
       "retrieve_instance_list",
       retrieve_instance_list,
       "Primary tool for listing local Minecraft instances. Returns instance IDs and metadata for selecting an instance."
+    ),
+    mcp_tool!(
+      "create_instance",
+      "Create a Minecraft instance and schedule required client/mod-loader downloads. Resolves game and loader metadata from version IDs.",
+      |app, params|
+      #[serde(deny_unknown_fields)]
+      {
+        #[schemars(description = "Game directory display name from launcher config `localGameDirectories[].name`.")]
+        directory_name: String,
+        #[schemars(description = "Game directory path from launcher config `localGameDirectories[].dir`.")]
+        directory_path: String,
+        #[schemars(description = "New instance name. Must be unique under the selected game directory.")]
+        name: String,
+        #[schemars(description = "Optional instance description. Defaults to an empty string.")]
+        description: Option<String>,
+        #[schemars(description = "Optional instance icon source. Defaults to the standard icon for the selected game version type.")]
+        icon_src: Option<String>,
+        #[schemars(description = "Minecraft game version ID, for example `1.21.5`.")]
+        game_version: String,
+        #[schemars(description = "Optional mod loader type: `unknown`, `fabric`, `forge`, `legacyforge`, `neoforge`, or `quilt`. Defaults to `unknown`.")]
+        mod_loader_type: Option<String>,
+        #[schemars(description = "Optional exact mod loader version. If omitted, the first stable loader version is used.")]
+        mod_loader_version: Option<String>,
+        #[schemars(description = "Optional OptiFine patch or filename returned by `fetch_optifine_version_list`. Omit for no OptiFine.")]
+        optifine_version: Option<String>,
+        #[schemars(description = "Optional local modpack archive path.")]
+        modpack_path: Option<String>,
+        #[schemars(description = "Whether to install Fabric API when creating a Fabric instance. Defaults to true.")]
+        is_install_fabric_api: Option<bool>,
+        #[schemars(description = "Whether to install QFAPI/QSL when creating a Quilt instance. Defaults to true.")]
+        is_install_qf_api: Option<bool>,
+      } => async move {
+        if params.name.trim().is_empty()
+          || params.directory_name.trim().is_empty()
+          || params.directory_path.trim().is_empty()
+        {
+          return Err(InstanceError::InvalidSourcePath.into());
+        }
+
+        let game = fetch_game_version_specific(app.clone(), params.game_version.clone()).await?;
+        let mod_loader_type = parse_mod_loader_type(params.mod_loader_type)?;
+        let mod_loader = resolve_mod_loader(
+          app.clone(),
+          params.game_version.clone(),
+          mod_loader_type,
+          params.mod_loader_version,
+        )
+        .await?;
+        let optifine =
+          resolve_optifine(app.clone(), params.game_version, params.optifine_version).await?;
+        let icon_src = params
+          .icon_src
+          .filter(|icon_src| !icon_src.trim().is_empty())
+          .unwrap_or_else(|| default_icon_for_game_type(&game.game_type));
+
+        create_instance(
+          app,
+          GameDirectory {
+            name: params.directory_name,
+            dir: PathBuf::from(params.directory_path),
+          },
+          params.name,
+          params.description.unwrap_or_default(),
+          icon_src,
+          game,
+          mod_loader,
+          optifine,
+          params.modpack_path,
+          params.is_install_fabric_api.or(Some(true)),
+          params.is_install_qf_api.or(Some(true)),
+        )
+        .await
+      }
     ),
     mcp_tool!(
       "retrieve_world_list",
