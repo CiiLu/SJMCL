@@ -193,9 +193,8 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     const constructBgImgSrc = async () => {
       const bgKey = config.appearance.background.choice;
       if (bgKey.startsWith("%built-in:")) {
-        setBgImgSrc(
-          `/images/backgrounds/${bgKey.replace("%built-in:", "")}.jpg`
-        );
+        const builtInKey = bgKey.replace("%built-in:", "");
+        setBgImgSrc(`/images/backgrounds/${builtInKey}-${colorMode}.jpg`);
       } else {
         const _appDataDir = await appDataDir();
         setBgImgSrc(
@@ -206,7 +205,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
     };
 
     constructBgImgSrc();
-  }, [config.appearance.background.choice]);
+  }, [colorMode, config.appearance.background.choice]);
 
   // update font family to body CSS by config.
   useEffect(() => {

@@ -41,8 +41,9 @@ const AppearanceSettingsPage = () => {
   const toast = useToast();
   const appearanceConfigs = config.appearance;
   const primaryColor = appearanceConfigs.theme.primaryColor;
+  const builtInBgPrefix = "%built-in:";
   const selectedBgKey = appearanceConfigs.background.choice.replace(
-    "%built-in:",
+    builtInBgPrefix,
     ""
   );
 
@@ -131,7 +132,7 @@ const AppearanceSettingsPage = () => {
 
           let newSelectedBgKey;
           if (customBgList.length === 1) {
-            newSelectedBgKey = "%built-in:Jokull";
+            newSelectedBgKey = `${builtInBgPrefix}Florwyn`;
             if (appearanceConfigs.background.randomCustom)
               update("appearance.background.randomCustom", false);
           } else {
@@ -313,7 +314,7 @@ const AppearanceSettingsPage = () => {
   };
 
   const PresetBackgroundList = () => {
-    const presetBgList = ["Jokull", "SJTU-eastgate", "GNLXC"];
+    const presetBgList = ["Florwyn", "SJTU-eastgate"];
 
     return (
       <Wrap spacing={3.5} justify="right">
@@ -321,10 +322,13 @@ const AppearanceSettingsPage = () => {
           <WrapItem key={bg}>
             <BackgroundCard
               bgAlt={bg}
-              bgSrc={`/images/backgrounds/${bg}.jpg`}
+              bgSrc={`/images/backgrounds/${bg}-thumbnail.jpg`}
               selected={selectedBgKey === bg}
               onSelect={() =>
-                update("appearance.background.choice", `%built-in:${bg}`)
+                update(
+                  "appearance.background.choice",
+                  `${builtInBgPrefix}${bg}`
+                )
               }
               label={t(
                 `AppearanceSettingsPage.background.presetBgList.${bg}.name`
@@ -495,7 +499,9 @@ const AppearanceSettingsPage = () => {
                 update("appearance.background.randomCustom", e.target.checked);
                 if (
                   e.target.checked &&
-                  appearanceConfigs.background.choice.startsWith("%built-in:")
+                  appearanceConfigs.background.choice.startsWith(
+                    builtInBgPrefix
+                  )
                 ) {
                   update(
                     "appearance.background.choice",

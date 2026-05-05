@@ -327,14 +327,11 @@
         }
       },
       "presetBgList": {
-        "Jokull": {
-          "name": "Jǫkull Village"
+        "Florwyn": {
+          "name": "Florwyn"
         },
         "SJTU-eastgate": {
           "name": "SJTU Eastgate"
-        },
-        "GNLXC": {
-          "name": "GNWork City"
         }
       }
     },

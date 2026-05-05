@@ -262,9 +262,9 @@ export const defaultConfig: LauncherConfig = {
       fontSize: 100,
     },
     background: {
-      choice: "%built-in:Jokull",
+      choice: "%built-in:Florwyn",
       randomCustom: false,
-      autoDarken: true,
+      autoDarken: false,
     },
     accessibility: {
       invertColors: false,

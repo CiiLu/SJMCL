@@ -1,13 +1,12 @@
 use crate::launcher_config::constants::{CONFIG_PARTIAL_UPDATE_EVENT, LAUNCHER_CFG_FILE_NAME};
+use crate::launcher_config::migrations::{deserialize_background, deserialize_discover_sources};
 use crate::partial::PartialUpdate;
 use crate::storage::Storage;
 use crate::utils::string::snake_to_camel_case;
 use crate::utils::sys_info;
 use crate::{APP_DATA_DIR, EXE_DIR, IS_PORTABLE};
 use partial_derive::Partial;
-use serde::de::Deserializer;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use smart_default::SmartDefault;
 use std::path::PathBuf;
 use strum_macros::Display;
@@ -223,11 +222,14 @@ structstruck::strike! {
         #[default = 100]
         pub font_size: usize, // as percent
       },
-      pub background: struct {
-        #[default = "%built-in:Jokull"]
+      #[serde(
+        default,
+        deserialize_with = "deserialize_background"
+      )]
+      pub background: struct AppearanceBackgroundConfig {
+        #[default = "%built-in:Florwyn"]
         pub choice: String,
         pub random_custom: bool,
-        #[default = true]
         pub auto_darken: bool,
       },
       pub accessibility: struct {
@@ -304,7 +306,6 @@ structstruck::strike! {
     },
     pub global_game_config: GameConfig,
     pub local_game_directories: Vec<GameDirectory>,
-    // Changed from Vec<String> to Vec<(String, bool)> with default enabled=true
     #[serde(
       default,
       deserialize_with = "deserialize_discover_sources"
@@ -403,39 +404,3 @@ pub enum LauncherConfigError {
 }
 
 impl std::error::Error for LauncherConfigError {}
-
-// deserializing discover sources from old and new formats.
-// TODO: unify to migration system later.
-fn deserialize_discover_sources<'de, D>(deserializer: D) -> Result<Vec<(String, bool)>, D::Error>
-where
-  D: Deserializer<'de>,
-{
-  let v = match Value::deserialize(deserializer) {
-    Ok(v) => v,
-    Err(_) => return Ok(Vec::default()),
-  };
-
-  let arr = match v.as_array() {
-    Some(a) => a,
-    None => return Ok(Vec::default()),
-  };
-
-  fn parse_item(item: &Value) -> Option<(String, bool)> {
-    // old (<=0.6.3) format: String(url)
-    if let Some(s) = item.as_str() {
-      return Some((s.to_string(), true));
-    }
-
-    // new format: (String, bool)
-    let t = item.as_array()?;
-    if t.len() != 2 {
-      log::error!("Invalid discover source item format: {:?}", item);
-      return None;
-    }
-    let url = t[0].as_str()?;
-    let enabled = t[1].as_bool()?;
-    Some((url.to_string(), enabled))
-  }
-
-  Ok(arr.iter().filter_map(parse_item).collect())
-}
