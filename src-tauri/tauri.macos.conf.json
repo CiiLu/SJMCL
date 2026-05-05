@@ -2,7 +2,7 @@
   "identifier": "SJMCL",
   "bundle": {
     "resources": {
-      "infoplist/**": "./"
+      "infoplist": ""
     },
     "macOS": {
       "dmg": {
