@@ -1,6 +1,7 @@
 use crate::instance::commands::*;
 use crate::instance::models::misc::{InstanceError, ModLoaderType};
 use crate::intelligence::mcp_server::launcher::McpContext;
+use crate::intelligence::mcp_server::model::MCPError;
 use crate::launcher_config::models::GameDirectory;
 use crate::mcp_tool;
 use crate::resource::commands::{
@@ -71,6 +72,7 @@ async fn resolve_optifine(
     .ok_or_else(|| ResourceError::ParseError.into())
 }
 
+// In the user-facing workflow, the default icon mapping lives in the frontend create-instance modal.
 fn default_icon_for_game_type(game_type: &str) -> String {
   match game_type {
     "snapshot" => "/images/icons/JEIcon_Snapshot.png",
@@ -210,7 +212,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         confirm: bool,
       } => async move {
         if !params.confirm {
-          return Err(crate::instance::models::misc::InstanceError::InvalidSourcePath.into());
+          return Err(MCPError::ToolNeedsConfirmation.into());
         }
 
         delete_game_server(app, params.instance_id, params.server_addr).await
@@ -262,7 +264,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         confirm: bool,
       } => async move {
         if !params.confirm {
-          return Err(crate::instance::models::misc::InstanceError::InvalidSourcePath.into());
+          return Err(MCPError::ToolNeedsConfirmation.into());
         }
 
         delete_instance(app, params.instance_id)

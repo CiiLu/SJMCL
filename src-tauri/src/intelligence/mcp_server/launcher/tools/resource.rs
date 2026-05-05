@@ -1,13 +1,12 @@
 use crate::instance::models::misc::ModLoaderType;
 use crate::intelligence::mcp_server::launcher::McpContext;
+use crate::intelligence::mcp_server::model::MCPError;
 use crate::mcp_tool;
 use crate::resource::commands::{
   download_game_server, fetch_game_version_list, fetch_game_version_specific,
   fetch_mod_loader_version_list, fetch_optifine_version_list, fetch_resource_list_by_name,
 };
-use crate::resource::models::{
-  OtherResourceInfo, OtherResourceSearchQuery, OtherResourceSource, ResourceError,
-};
+use crate::resource::models::{OtherResourceSearchQuery, OtherResourceSource, ResourceError};
 use rmcp::handler::server::tool::ToolRoute;
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -34,18 +33,6 @@ struct McpOtherResourceSearchQuery {
   page: u32,
   #[schemars(description = "Page size.")]
   page_size: u32,
-}
-
-fn parse_resource_source(source: &str) -> Result<OtherResourceSource, crate::error::SJMCLError> {
-  OtherResourceSource::from_str(source).map_err(|_| ResourceError::NoDownloadApi.into())
-}
-
-fn parse_mod_loader_type(loader_type: &str) -> Result<ModLoaderType, crate::error::SJMCLError> {
-  ModLoaderType::from_str(loader_type).map_err(|_| ResourceError::ParseError.into())
-}
-
-fn strip_resource_icon(resource: &mut OtherResourceInfo) {
-  resource.icon_src.clear();
 }
 
 fn to_search_query(query: McpOtherResourceSearchQuery) -> OtherResourceSearchQuery {
@@ -88,7 +75,8 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         #[schemars(description = "Mod loader type. Accepted values include `forge`, `legacyforge`, `fabric`, `neoforge`, and `quilt`.")]
         mod_loader_type: String,
       } => async move {
-        let mod_loader_type = parse_mod_loader_type(&params.mod_loader_type)?;
+        let mod_loader_type =
+          ModLoaderType::from_str(&params.mod_loader_type).map_err(|_| ResourceError::ParseError)?;
         fetch_mod_loader_version_list(app, params.game_version, mod_loader_type).await
       }
     ),
@@ -113,10 +101,11 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         #[schemars(description = "Search query options.")]
         query: McpOtherResourceSearchQuery,
       } => async move {
-        let download_source = parse_resource_source(&params.download_source)?;
+        let download_source = OtherResourceSource::from_str(&params.download_source)
+          .map_err(|_| ResourceError::NoDownloadApi)?;
         let mut result = fetch_resource_list_by_name(app, download_source, to_search_query(params.query)).await?;
         for resource in &mut result.list {
-          strip_resource_icon(resource);
+          resource.icon_src.clear();  // Clear the icon field to reduce payload size for LLMs.
         }
         Ok(result)
       }
@@ -135,7 +124,7 @@ pub fn tool_routes() -> Vec<ToolRoute<McpContext>> {
         confirm: bool,
       } => async move {
         if !params.confirm {
-          return Err(ResourceError::FileOperationError.into());
+          return Err(MCPError::ToolNeedsConfirmation.into());
         }
         let path = PathBuf::from(params.dest.trim());
         let dest = if path.is_dir() {
