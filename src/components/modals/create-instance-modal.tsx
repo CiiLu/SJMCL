@@ -91,6 +91,7 @@ export const CreateInstanceModal: React.FC<Omit<ModalProps, "children">> = ({
 
   useEffect(() => {
     setSelectedModLoader(defaultModLoaderResourceInfo);
+    setSelectedOptiFine(undefined);
     setInstanceName("");
     setInstanceDescription("");
     setInstanceIconSrc(
