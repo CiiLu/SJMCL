@@ -114,6 +114,12 @@
       }
     }
   },
+  "MainLayout": {
+    "fileDnD": {
+      "title": "導入改囊集",
+      "desc": "將改囊集案 {{fileName}} 導入 SJMCL"
+    }
+  },
   "AddAuthServerModal": {
     "header": {
       "title": "增鑒權伺服器"
@@ -321,14 +327,11 @@
         }
       },
       "presetBgList": {
-        "Jokull": {
-          "name": "銀淞雪鎮"
+        "Florwyn": {
+          "name": "櫻滿集"
         },
         "SJTU-eastgate": {
           "name": "SJTU 紫氣東來門"
-        },
-        "GNLXC": {
-          "name": "GNWork 理想城"
         }
       }
     },
@@ -647,6 +650,7 @@
       "forge-libraries": "Forge 行庫",
       "optifine-libraries": "OptiFine 行庫",
       "launcher-update": "迭更啟者",
+      "extension-update": "迭更擴充套件 {{param1}} {{param2}}",
       "mojang-java": "爪哇 {{param}} 行時"
     }
   },
@@ -805,6 +809,7 @@
     "failedToRender": "擴充之文渲染未成。"
   },
   "ExtensionHostContextProvider": {
+    "extensionProvidedDialog": "今對話匡由擴充套件 {{name}} 所供",
     "toast": {
       "activateError": "啟用擴充套件 {{name}} 未成"
     }
@@ -827,6 +832,10 @@
   },
   "ExtensionSettingsPage": {
     "alert": "SJMCL 不能制第三方擴充之行，亦不能保其私據之處置。惟可信源之擴充，可置而啟之。",
+    "fileDnD": {
+      "title": "置 SJMCL 擴充套件",
+      "desc": "將擴充套件案 {{fileName}} 置於 SJMCL"
+    },
     "installed": "已裝擴充套件",
     "menu": {
       "info": "覽資訊"
@@ -845,6 +854,10 @@
         }
       }
     }
+  },
+  "ExtensionUpdateConfirmDialog": {
+    "title": "迭更擴充套件",
+    "body": "擴充套件 {{identifier}} 已自 {{src}} 得新版本 {{version}}，然否確認安之？"
   },
   "GameAdvancedSettingsPage": {
     "title": "戲之進階置設",
@@ -1118,6 +1131,13 @@
     "functions": {
       "title": "功用",
       "settings": {
+        "discoverPage": {
+          "title": "發見頁",
+          "description": "於發見頁便覽 Minecraft 與社群聞，尋而引戲資源",
+          "on": "啟",
+          "search-only": "惟顯尋",
+          "off": "匿"
+        },
         "instancesNavType": {
           "title": "例頁導航欄模式",
           "description": "更改例頁左側導航欄然否顯、分組方式",
@@ -1344,6 +1364,7 @@
   "HomeWidget": {
     "extraOpMenu": {
       "moveUp": "上移此卡片",
+      "moveDown": "下移此卡片",
       "extensionInfo": "覽擴充套件資訊",
       "settings": "置此擴充套件"
     }
@@ -1417,6 +1438,10 @@
     }
   },
   "InstanceModsPage": {
+    "fileDnD": {
+      "title": "置改囊",
+      "desc": "將改囊案 {{fileName}} 置於此例"
+    },
     "modLoaderList": {
       "title": "載器",
       "notInstalled": "未裝",
@@ -1435,6 +1460,10 @@
     }
   },
   "InstanceResourcePacksPage": {
+    "fileDnD": {
+      "title": "增資囊",
+      "desc": "將資囊案 {{fileName}} 加於此例"
+    },
     "resourcePackList": {
       "title": "全例資囊"
     },
@@ -1443,9 +1472,12 @@
     }
   },
   "InstanceSchematicsPage": {
+    "fileDnD": {
+      "title": "增蜃圖",
+      "desc": "將蜃圖案 {{fileName}} 加於此例"
+    },
     "schematicList": {
-      "title": "蜃圖",
-      "preview": "預覽"
+      "title": "蜃圖"
     }
   },
   "InstanceScreenshotsPage": {
@@ -1472,6 +1504,10 @@
     }
   },
   "InstanceShaderPacksPage": {
+    "fileDnD": {
+      "title": "增光影",
+      "desc": "將光影案 {{fileName}} 加於此例"
+    },
     "shaderLoaderList": {
       "title": "載器",
       "notInstalled": "未裝"
@@ -1503,6 +1539,10 @@
     }
   },
   "InstanceWorldsPage": {
+    "fileDnD": {
+      "title": "增生界",
+      "desc": "將存檔案 {{fileName}} 加於此例"
+    },
     "worldList": {
       "title": "本地生界",
       "lastPlayedAt": "前遊於",
@@ -2432,6 +2472,14 @@
           }
         }
       },
+      "fetchOptiFineVersionList": {
+        "error": {
+          "title": "獲取 OptiFine 版本列表未成",
+          "description": {
+            "NETWORK_ERROR": "不能連線到伺服器"
+          }
+        }
+      },
       "fetchResourceListByName": {
         "error": {
           "title": "獲取資源列表未成",
@@ -2771,6 +2819,7 @@
           "description": {
             "INVALID_PACKAGE_FORMAT": "擴充套件包內容格式無效",
             "INVALID_IDENTIFIER": "擴充套件識別符號無效",
+            "IDENTIFIER_MISMATCH": "擴充套件識別符號與所期不符",
             "INVALID_NAME": "擴充套件逾矩之名",
             "LAUNCHER_VERSION_TOO_LOW": "啟者版過低",
             "EXTENSION_NOT_FOUND": "未找到待增案"

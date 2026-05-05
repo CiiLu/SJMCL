@@ -114,6 +114,12 @@
       }
     }
   },
+  "MainLayout": {
+    "fileDnD": {
+      "title": "匯入模組包",
+      "desc": "將模組包檔案 {{fileName}} 匯入到 SJMCL"
+    }
+  },
   "AddAuthServerModal": {
     "header": {
       "title": "新增認證伺服器"
@@ -321,14 +327,11 @@
         }
       },
       "presetBgList": {
-        "Jokull": {
-          "name": "銀淞雪鎮"
+        "Florwyn": {
+          "name": "櫻滿集"
         },
         "SJTU-eastgate": {
           "name": "SJTU 紫氣東來門"
-        },
-        "GNLXC": {
-          "name": "GNWork 理想城"
         }
       }
     },
@@ -647,6 +650,7 @@
       "forge-libraries": "Forge 執行庫",
       "optifine-libraries": "OptiFine 執行庫",
       "launcher-update": "更新啟動器",
+      "extension-update": "更新擴充套件 {{param1}} {{param2}}",
       "mojang-java": "Java {{param}} 執行時"
     }
   },
@@ -805,6 +809,7 @@
     "failedToRender": "擴充套件內容渲染失敗。"
   },
   "ExtensionHostContextProvider": {
+    "extensionProvidedDialog": "目前對話框由擴充套件 {{name}} 提供",
     "toast": {
       "activateError": "啟用擴充套件 {{name}} 失敗"
     }
@@ -827,6 +832,10 @@
   },
   "ExtensionSettingsPage": {
     "alert": "SJMCL 無法控制第三方擴充套件的行為，包括它們如何處理你的個人資料。請僅安裝並啟用來自可信來源的擴充套件。",
+    "fileDnD": {
+      "title": "安裝 SJMCL 擴充套件",
+      "desc": "將擴充套件檔案 {{fileName}} 安裝到 SJMCL"
+    },
     "installed": "已安裝擴充套件",
     "menu": {
       "info": "檢視資訊"
@@ -845,6 +854,10 @@
         }
       }
     }
+  },
+  "ExtensionUpdateConfirmDialog": {
+    "title": "更新擴充套件",
+    "body": "擴充套件 {{identifier}} 已從 {{src}} 下載新版本 {{version}}，是否確認安裝？"
   },
   "GameAdvancedSettingsPage": {
     "title": "高階遊戲設定",
@@ -1118,6 +1131,13 @@
     "functions": {
       "title": "功能",
       "settings": {
+        "discoverPage": {
+          "title": "發現頁",
+          "description": "在發現頁便捷地瀏覽 Minecraft 與社群新聞、搜尋與下載遊戲資源",
+          "on": "開啟",
+          "search-only": "僅顯示搜尋",
+          "off": "隱藏"
+        },
         "instancesNavType": {
           "title": "實例頁導航欄模式",
           "description": "更改實例頁左側導航欄是否顯示、分組方式",
@@ -1344,6 +1364,7 @@
   "HomeWidget": {
     "extraOpMenu": {
       "moveUp": "上移此卡片",
+      "moveDown": "下移此卡片",
       "extensionInfo": "檢視擴充套件資訊",
       "settings": "設定此擴充套件"
     }
@@ -1417,6 +1438,10 @@
     }
   },
   "InstanceModsPage": {
+    "fileDnD": {
+      "title": "安裝模組",
+      "desc": "將模組檔案 {{fileName}} 安裝到此實例"
+    },
     "modLoaderList": {
       "title": "載入器",
       "notInstalled": "未安裝",
@@ -1435,6 +1460,10 @@
     }
   },
   "InstanceResourcePacksPage": {
+    "fileDnD": {
+      "title": "新增資源包",
+      "desc": "將資源包檔案 {{fileName}} 新增到此實例"
+    },
     "resourcePackList": {
       "title": "全域性資源包"
     },
@@ -1443,9 +1472,12 @@
     }
   },
   "InstanceSchematicsPage": {
+    "fileDnD": {
+      "title": "新增原理圖",
+      "desc": "將原理圖檔案 {{fileName}} 新增到此實例"
+    },
     "schematicList": {
-      "title": "原理圖",
-      "preview": "預覽"
+      "title": "原理圖"
     }
   },
   "InstanceScreenshotsPage": {
@@ -1472,6 +1504,10 @@
     }
   },
   "InstanceShaderPacksPage": {
+    "fileDnD": {
+      "title": "新增光影包",
+      "desc": "將光影包檔案 {{fileName}} 新增到此實例"
+    },
     "shaderLoaderList": {
       "title": "載入器",
       "notInstalled": "未安裝"
@@ -1503,6 +1539,10 @@
     }
   },
   "InstanceWorldsPage": {
+    "fileDnD": {
+      "title": "新增世界",
+      "desc": "將存檔檔案 {{fileName}} 新增到此實例"
+    },
     "worldList": {
       "title": "本機世界",
       "lastPlayedAt": "上次遊玩於",
@@ -2432,6 +2472,14 @@
           }
         }
       },
+      "fetchOptiFineVersionList": {
+        "error": {
+          "title": "獲取 OptiFine 版本清單失敗",
+          "description": {
+            "NETWORK_ERROR": "無法連線到伺服器"
+          }
+        }
+      },
       "fetchResourceListByName": {
         "error": {
           "title": "獲取資源清單失敗",
@@ -2771,6 +2819,7 @@
           "description": {
             "INVALID_PACKAGE_FORMAT": "擴充套件封包內容格式無效",
             "INVALID_IDENTIFIER": "擴充套件識別碼無效",
+            "IDENTIFIER_MISMATCH": "擴充套件識別碼與預期不符",
             "INVALID_NAME": "擴充套件名稱無效",
             "LAUNCHER_VERSION_TOO_LOW": "啟動器版本過低",
             "EXTENSION_NOT_FOUND": "找不到要新增的檔案"

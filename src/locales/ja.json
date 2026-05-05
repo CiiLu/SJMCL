@@ -114,6 +114,12 @@
       }
     }
   },
+  "MainLayout": {
+    "fileDnD": {
+      "title": "モッドパックをインポート",
+      "desc": "モッドパックファイル {{fileName}} を SJMCL にインポート"
+    }
+  },
   "AddAuthServerModal": {
     "header": {
       "title": "認証サーバー追加"
@@ -321,14 +327,11 @@
         }
       },
       "presetBgList": {
-        "Jokull": {
-          "name": "雪原の秘境"
+        "Florwyn": {
+          "name": "Florwyn"
         },
         "SJTU-eastgate": {
           "name": "紫気東来（ SJTU 東門）"
-        },
-        "GNLXC": {
-          "name": "GNWork 理想郷"
         }
       }
     },
@@ -647,6 +650,7 @@
       "forge-libraries": "Forge ランタイムライブラリ",
       "optifine-libraries": "OptiFine ランタイムライブラリ",
       "launcher-update": "ランチャーを更新",
+      "extension-update": "拡張機能 {{param1}} {{param2}} を更新",
       "mojang-java": "Java {{param}} ランタイム"
     }
   },
@@ -805,6 +809,7 @@
     "failedToRender": "この拡張機能の内容を表示できませんでした。"
   },
   "ExtensionHostContextProvider": {
+    "extensionProvidedDialog": "このダイアログは拡張機能 {{name}} によって提供されています",
     "toast": {
       "activateError": "拡張機能 {{name}} の有効化に失敗"
     }
@@ -827,6 +832,10 @@
   },
   "ExtensionSettingsPage": {
     "alert": "SJMCL はサードパーティー拡張機能の挙動や個人データの扱いを制御できません。信頼できる提供元の拡張機能のみをインストールして有効化してください。",
+    "fileDnD": {
+      "title": "SJMCL 拡張機能をインストール",
+      "desc": "拡張機能ファイル {{fileName}} を SJMCL にインストール"
+    },
     "installed": "インストール済みの拡張機能",
     "menu": {
       "info": "拡張機能情報"
@@ -845,6 +854,10 @@
         }
       }
     }
+  },
+  "ExtensionUpdateConfirmDialog": {
+    "title": "拡張機能を更新",
+    "body": "拡張機能 {{identifier}} は {{src}} から新しいバージョン {{version}} をダウンロードしました。インストールを確認しますか？"
   },
   "GameAdvancedSettingsPage": {
     "title": "高度起動設定",
@@ -1118,6 +1131,13 @@
     "functions": {
       "title": "機能設定",
       "settings": {
+        "discoverPage": {
+          "title": "発見ページ",
+          "description": "発見ページで Minecraft やコミュニティのニュースを手軽に閲覧し、ゲームリソースを検索・ダウンロードできます。",
+          "on": "有効",
+          "search-only": "検索のみ",
+          "off": "非表示"
+        },
         "instancesNavType": {
           "title": "インスタンス分類",
           "description": "インスタンスページの左側ナビゲーションバーの表示・グループ化方法を変更",
@@ -1344,6 +1364,7 @@
   "HomeWidget": {
     "extraOpMenu": {
       "moveUp": "このウィジェットを上へ移動",
+      "moveDown": "このウィジェットを下へ移動",
       "extensionInfo": "拡張機能情報",
       "settings": "拡張機能の設定を開く"
     }
@@ -1417,6 +1438,10 @@
     }
   },
   "InstanceModsPage": {
+    "fileDnD": {
+      "title": "モッドをインストール",
+      "desc": "モッドファイル {{fileName}} をこのインスタンスにインストール"
+    },
     "modLoaderList": {
       "title": "モッドローダー",
       "notInstalled": "未インストール",
@@ -1435,6 +1460,10 @@
     }
   },
   "InstanceResourcePacksPage": {
+    "fileDnD": {
+      "title": "リソースパックを追加",
+      "desc": "リソースパックファイル {{fileName}} をこのインスタンスに追加"
+    },
     "resourcePackList": {
       "title": "グローバルリソースパック"
     },
@@ -1443,9 +1472,12 @@
     }
   },
   "InstanceSchematicsPage": {
+    "fileDnD": {
+      "title": "スキーマティックを追加",
+      "desc": "スキーマティックファイル {{fileName}} をこのインスタンスに追加"
+    },
     "schematicList": {
-      "title": "スキーマティック",
-      "preview": "プレビュー"
+      "title": "スキーマティック"
     }
   },
   "InstanceScreenshotsPage": {
@@ -1472,6 +1504,10 @@
     }
   },
   "InstanceShaderPacksPage": {
+    "fileDnD": {
+      "title": "シェーダーパックを追加",
+      "desc": "シェーダーパックファイル {{fileName}} をこのインスタンスに追加"
+    },
     "shaderLoaderList": {
       "title": "ローダー",
       "notInstalled": "未インストール"
@@ -1503,6 +1539,10 @@
     }
   },
   "InstanceWorldsPage": {
+    "fileDnD": {
+      "title": "ワールドを追加",
+      "desc": "セーブファイル {{fileName}} をこのインスタンスに追加"
+    },
     "worldList": {
       "title": "ローカルワールド",
       "lastPlayedAt": "前回プレイ：",
@@ -2432,6 +2472,14 @@
           }
         }
       },
+      "fetchOptiFineVersionList": {
+        "error": {
+          "title": "OptiFine バージョン一覧の取得に失敗",
+          "description": {
+            "NETWORK_ERROR": "サーバーに接続できません"
+          }
+        }
+      },
       "fetchResourceListByName": {
         "error": {
           "title": "リソースリストの取得に失敗",
@@ -2771,6 +2819,7 @@
           "description": {
             "INVALID_PACKAGE_FORMAT": "拡張機能パッケージの内容形式が無効です",
             "INVALID_IDENTIFIER": "拡張機能識別子が無効です",
+            "IDENTIFIER_MISMATCH": "拡張機能識別子が想定と一致しません",
             "INVALID_NAME": "拡張機能名が無効です",
             "LAUNCHER_VERSION_TOO_LOW": "ランチャーバージョンが低すぎます",
             "EXTENSION_NOT_FOUND": "対象のパッケージファイルが見つかりません"

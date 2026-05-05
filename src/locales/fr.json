@@ -114,6 +114,12 @@
       }
     }
   },
+  "MainLayout": {
+    "fileDnD": {
+      "title": "Importer un modpack",
+      "desc": "Importer le fichier de modpack {{fileName}} dans SJMCL"
+    }
+  },
   "AddAuthServerModal": {
     "header": {
       "title": "Ajouter un serveur d'authentification"
@@ -321,14 +327,11 @@
         }
       },
       "presetBgList": {
-        "Jokull": {
-          "name": "La ville de neige"
+        "Florwyn": {
+          "name": "Florwyn"
         },
         "SJTU-eastgate": {
           "name": "Porte Est SJTU"
-        },
-        "GNLXC": {
-          "name": "La ville idéale de GNWork"
         }
       }
     },
@@ -647,6 +650,7 @@
       "forge-libraries": "Bibliothèques d'exécution de Forge",
       "optifine-libraries": "Bibliothèques d'exécution d'OptiFine",
       "launcher-update": "Mettre à jour le lanceur",
+      "extension-update": "Mettre à jour l'extension {{param1}} {{param2}}",
       "mojang-java": "Java {{param}} fonctionne"
     }
   },
@@ -805,6 +809,7 @@
     "failedToRender": "Impossible d'afficher le contenu de cette extension."
   },
   "ExtensionHostContextProvider": {
+    "extensionProvidedDialog": "Cette boîte de dialogue est fournie par l'extension {{name}}",
     "toast": {
       "activateError": "Échec de l'activation de l'extension {{name}}"
     }
@@ -827,6 +832,10 @@
   },
   "ExtensionSettingsPage": {
     "alert": "SJMCL ne peut pas contrôler le comportement des extensions tierces, y compris la manière dont elles traitent vos données personnelles. N'installez et n'activez que des extensions provenant de sources fiables.",
+    "fileDnD": {
+      "title": "Installer une extension SJMCL",
+      "desc": "Installer le fichier d'extension {{fileName}} dans SJMCL"
+    },
     "installed": "Extensions installées",
     "menu": {
       "info": "Informations de l'extension"
@@ -845,6 +854,10 @@
         }
       }
     }
+  },
+  "ExtensionUpdateConfirmDialog": {
+    "title": "Mettre à jour l'extension",
+    "body": "L'extension {{identifier}} a téléchargé la nouvelle version {{version}} depuis {{src}}. Confirmer l'installation ?"
   },
   "GameAdvancedSettingsPage": {
     "title": "Paramètres avancés du jeu",
@@ -1118,6 +1131,13 @@
     "functions": {
       "title": "Fonctionnalités",
       "settings": {
+        "discoverPage": {
+          "title": "Page Découvrir",
+          "description": "Consultez facilement les actualités Minecraft et de la communauté, puis recherchez et téléchargez des ressources de jeu depuis la page Découvrir.",
+          "on": "Activée",
+          "search-only": "Recherche seulement",
+          "off": "Masquée"
+        },
         "instancesNavType": {
           "title": "Mode de la barre latérale des instances",
           "description": "Modifier l'affichage et le mode de regroupement de la barre latérale des instances",
@@ -1344,6 +1364,7 @@
   "HomeWidget": {
     "extraOpMenu": {
       "moveUp": "Déplacer ce widget vers le haut",
+      "moveDown": "Déplacer cette carte vers le bas",
       "extensionInfo": "Infos sur l'extension",
       "settings": "Ouvrir les paramètres de l'extension"
     }
@@ -1417,6 +1438,10 @@
     }
   },
   "InstanceModsPage": {
+    "fileDnD": {
+      "title": "Installer des mods",
+      "desc": "Installer le fichier de mod {{fileName}} dans cette instance"
+    },
     "modLoaderList": {
       "title": "Chargeur",
       "notInstalled": "Non installé",
@@ -1435,6 +1460,10 @@
     }
   },
   "InstanceResourcePacksPage": {
+    "fileDnD": {
+      "title": "Ajouter des packs de ressources",
+      "desc": "Ajouter le fichier de pack de ressources {{fileName}} à cette instance"
+    },
     "resourcePackList": {
       "title": "Packs de ressources globaux"
     },
@@ -1443,9 +1472,12 @@
     }
   },
   "InstanceSchematicsPage": {
+    "fileDnD": {
+      "title": "Ajouter des schémas",
+      "desc": "Ajouter le fichier de schéma {{fileName}} à cette instance"
+    },
     "schematicList": {
-      "title": "Schémas",
-      "preview": "Aperçu"
+      "title": "Schémas"
     }
   },
   "InstanceScreenshotsPage": {
@@ -1472,6 +1504,10 @@
     }
   },
   "InstanceShaderPacksPage": {
+    "fileDnD": {
+      "title": "Ajouter des packs de shaders",
+      "desc": "Ajouter le fichier de shader {{fileName}} à cette instance"
+    },
     "shaderLoaderList": {
       "title": "Loaders",
       "notInstalled": "Non installé"
@@ -1503,6 +1539,10 @@
     }
   },
   "InstanceWorldsPage": {
+    "fileDnD": {
+      "title": "Ajouter des mondes",
+      "desc": "Ajouter le fichier de sauvegarde {{fileName}} à cette instance"
+    },
     "worldList": {
       "title": "Mondes locaux",
       "lastPlayedAt": "Dernière partie le",
@@ -2432,6 +2472,14 @@
           }
         }
       },
+      "fetchOptiFineVersionList": {
+        "error": {
+          "title": "Échec de la récupération de la liste des versions d'OptiFine",
+          "description": {
+            "NETWORK_ERROR": "Échec de la connexion au serveur"
+          }
+        }
+      },
       "fetchResourceListByName": {
         "error": {
           "title": "Échec de la récupération de la liste des ressources",
@@ -2771,6 +2819,7 @@
           "description": {
             "INVALID_PACKAGE_FORMAT": "Le format du contenu du paquet d'extension est invalide",
             "INVALID_IDENTIFIER": "L'identifiant de l'extension est invalide",
+            "IDENTIFIER_MISMATCH": "L'identifiant de l'extension ne correspond pas à celui attendu",
             "INVALID_NAME": "Le nom de l'extension est invalide",
             "LAUNCHER_VERSION_TOO_LOW": "La version du lanceur est trop ancienne",
             "EXTENSION_NOT_FOUND": "Fichier du paquet cible introuvable"
