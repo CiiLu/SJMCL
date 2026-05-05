@@ -133,7 +133,9 @@ const InstanceScreenshotsPage: React.FC = () => {
           cardAspectRatio={16 / 9}
           items={screenshots.map((screenshot) => ({
             cardContent: <ScreenshotsCard screenshot={screenshot} />,
-            p: 0,
+            sx: {
+              padding: "0 !important",
+            },
           }))}
         />
       ) : (
